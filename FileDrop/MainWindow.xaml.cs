@@ -21,6 +21,7 @@ using WinRT;
 using WinRT.Interop;
 using Microsoft.UI.Windowing;
 using FileDrop.Helpers;
+using FileDrop.Helpers.BLE;
 
 // To learn more about WinUI, the WinUI project structure,
 // and more about our project templates, see: http://aka.ms/winui-project-info.
@@ -47,6 +48,7 @@ namespace FileDrop
             App.mainWindow = this;
             SetCustomTitleBar();
             TrySetSystemBackdrop();
+            BLEPublisher.StartPublish();
         }
         #region 设置应用背景
         private bool TrySetSystemBackdrop()
@@ -177,6 +179,7 @@ namespace FileDrop
         }
         private void MainWindow_Closed(object sender, WindowEventArgs args)
         {
+            BLEPublisher.StopPublish();
             Repo.SaveAndClose();
         }
 
