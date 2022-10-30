@@ -1,0 +1,70 @@
+﻿<Page
+    x:Class="FileDrop.Pages.SettingsPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:FileDrop.Pages"
+    xmlns:model="using:FileDrop.Models"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d"
+    Background="Transparent">
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="60"/>
+        </Grid.RowDefinitions>
+        <TextBlock Grid.Row="0" Margin="40,25,0,0" Style="{ThemeResource TitleTextBlockStyle}" Text="设置" ></TextBlock>
+
+
+        <ScrollViewer Grid.Row="1" Margin="10,20,40,10" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" >
+            <StackPanel>
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Grid.Column="0" Text="本机名称" VerticalAlignment="Center" Margin="40,10,10,10"/>
+                    <TextBox Grid.Column="1" Text="{x:Bind settings.LocalName, Mode=TwoWay}" 
+                             VerticalAlignment="Center" Margin="80,0,5,0"/>
+                </Grid>
+                <RadioButtons Header="收到的文件存储位置" Margin="40,10,10,10">
+                    <RadioButton x:Name="downloadDir" IsChecked="{x:Bind settings.RecieveFolderDownload, Mode=TwoWay}" 
+                                 Content="&quot;下载&quot;文件夹"/>
+                    <RadioButton x:Name="customizeDir" IsChecked="{x:Bind settings.RecieveFolderCustomize, Mode=TwoWay}" 
+                                 Content="自定义"/>
+                </RadioButtons>
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="50"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBox Grid.Column="0" Text="{x:Bind settings.RecievePath, Mode=TwoWay}" 
+                             VerticalAlignment="Center" Margin="80,0,5,0" 
+                             IsEnabled="{x:Bind settings.RecieveFolderCustomize, Mode=OneWay}"/>
+                    <Button Grid.Column="1" VerticalAlignment="Center" Content="..." HorizontalAlignment="Stretch"
+                            IsEnabled="{x:Bind settings.RecieveFolderCustomize, Mode=OneWay}"/>
+                </Grid>
+            </StackPanel>
+        </ScrollViewer>
+
+        <!--下部分选项框-->
+        <Border Grid.Row="2" Background="{ThemeResource AppBarBackgroundThemeBrush}" VerticalAlignment="Stretch" 
+                HorizontalAlignment="Stretch">
+            <Button HorizontalAlignment="Right" Margin="10,0,40,0" Width="100" Click="saveButton_Click">
+                <Button.Flyout>
+                    <Flyout>
+                        <TextBlock Text="已保存"/>
+                    </Flyout>
+                </Button.Flyout>
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                    <Viewbox MaxHeight="18" MaxWidth="18">
+                        <SymbolIcon Symbol="Save"/>
+                    </Viewbox>
+                    <TextBlock Text="保存"/>
+                </StackPanel>
+            </Button>
+        </Border>
+    </Grid>
+</Page>

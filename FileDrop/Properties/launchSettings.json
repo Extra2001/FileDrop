@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "FileDrop (Package)": {
+      "commandName": "MsixPackage"
+    },
+    "FileDrop (Unpackaged)": {
+      "commandName": "Project"
+    }
+  }
+}

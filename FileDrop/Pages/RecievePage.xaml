@@ -1,0 +1,181 @@
+﻿<Page
+    x:Class="FileDrop.Pages.RecievePage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:FileDrop.Pages"
+    xmlns:model="using:FileDrop.Models"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d"
+    Background="Transparent">
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="90"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <TextBlock Grid.Row="0" Margin="40,25,0,0" Style="{ThemeResource TitleTextBlockStyle}" Text="接收" ></TextBlock>
+
+        <Button Grid.Row="1" Margin="10,20,10,10" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" 
+                HorizontalContentAlignment="Stretch"  >
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="96"/>
+                    <ColumnDefinition Width="96"/>
+                </Grid.ColumnDefinitions>
+                <TextBlock Margin="30,0,0,0" Grid.Column="0" VerticalAlignment="Center" Text="允许其他设备发现"/>
+                <ProgressRing Grid.Column="1" IsActive="{x:Bind FindSwitch.IsOn, Mode=OneWay}" Width="32"/>
+                <ToggleSwitch Grid.Column="2" x:Name="FindSwitch" IsOn="True" />
+            </Grid>
+        </Button>
+
+        <Grid Grid.Row="2" Margin="40,10,10,0" >
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+            <TextBlock Grid.Column="0" Margin="0,0,0,0" Style="{ThemeResource SubtitleTextBlockStyle}" Text="接收到的文件"/>
+            <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
+                <Button x:Name="selectAll" Click="selectAll_Click">
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                        <Viewbox MinWidth="20" MinHeight="20">
+                            <SymbolIcon Symbol="Accept"/>
+                        </Viewbox>
+                        <TextBlock Text="全选" Margin="8,0,0,0"/>
+                    </StackPanel>
+                </Button>
+
+                <Button x:Name="deselectAll" Visibility="Collapsed" Click="deselectAll_Click">
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                        <Viewbox MinWidth="20" MinHeight="20">
+                            <SymbolIcon Symbol="Clear"/>
+                        </Viewbox>
+                        <TextBlock Text="全不选" Margin="8,0,0,0"/>
+                    </StackPanel>
+                </Button>
+
+                <Button x:Name="deleteSelect" IsEnabled="False">
+                    <Button.Flyout>
+                        <Flyout x:Name="deleteConfirmFlyout">
+                            <StackPanel>
+                                <TextBlock Style="{ThemeResource BaseTextBlockStyle}" Text="将只删除该记录，而不删除文件，继续？" Margin="0,0,0,12" />
+                                <Button Click="deleteConfirmButton_Click" Content="删除" />
+                            </StackPanel>
+                        </Flyout>
+                    </Button.Flyout>
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                        <Viewbox MinWidth="20" MinHeight="20">
+                            <SymbolIcon Symbol="Delete"/>
+                        </Viewbox>
+                        <TextBlock Text="删除选定" Margin="8,0,0,0"/>
+                    </StackPanel>
+                </Button>
+            </StackPanel>
+        </Grid>
+
+        <ScrollViewer Grid.Row="3" x:Name="recievedScroll" Margin="10,15,10,0">
+            <ItemsRepeater ItemsSource="{x:Bind transfers, Mode=OneWay}">
+                <ItemsRepeater.ItemTemplate>
+                    <DataTemplate x:DataType="model:RecievedTransfer">
+                        <Expander HorizontalAlignment="Stretch" Margin="0,0,0,5">
+                            <Expander.Header>
+                                <Grid MinHeight="70">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="32"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="40"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="*"/>
+                                        <RowDefinition Height="*"/>
+                                    </Grid.RowDefinitions>
+                                    <CheckBox Grid.Column="0" Grid.RowSpan="2" Checked="CheckBox_Checked"
+                                              Unchecked="CheckBox_Checked" Tag="{x:Bind Id}"
+                                              IsChecked="{x:Bind Checked, Mode=TwoWay}"/>
+                                    <StackPanel Orientation="Horizontal" Grid.Column="1" Grid.RowSpan="2" >
+                                        <TextBlock Text="来自：" FontSize="22" VerticalAlignment="Center"/>
+                                        <TextBlock Text="{x:Bind From, Mode=OneWay}" FontSize="22" VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                    <StackPanel Orientation="Horizontal" Grid.Column="2" Grid.Row="0" >
+                                        <TextBlock Text="用时       ：" VerticalAlignment="Bottom"/>
+                                        <TextBlock Text="{x:Bind UsedTime, Mode=OneWay}" VerticalAlignment="Bottom"/>
+                                    </StackPanel>
+                                    <StackPanel Orientation="Horizontal" Grid.Column="2" Grid.Row="1">
+                                        <TextBlock Text="接收时间：" VerticalAlignment="Top"/>
+                                        <TextBlock Text="{x:Bind Time, Mode=OneWay}" VerticalAlignment="Top"/>
+                                    </StackPanel>
+                                    <Button Grid.Column="3" Grid.RowSpan="2">
+                                        <Button.Flyout>
+                                            <Flyout Opened="Flyout_Opened">
+                                                <StackPanel>
+                                                    <TextBlock Style="{ThemeResource BaseTextBlockStyle}" Text="将只删除该记录，而不删除文件，继续？" Margin="0,0,0,12" />
+                                                    <Button Click="deleteConfirmButton2_Click" Content="删除" Tag="{x:Bind Id}" />
+                                                </StackPanel>
+                                            </Flyout>
+                                        </Button.Flyout>
+                                        <Viewbox MaxHeight="18" MaxWidth="18">
+                                            <SymbolIcon Symbol="Delete"/>
+                                        </Viewbox>
+                                    </Button>
+                                </Grid>
+                            </Expander.Header>
+                            <StackPanel>
+                                <Grid Margin="10,0,12,5">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="40"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="70"/>
+                                        <ColumnDefinition Width="42"/>
+                                        <ColumnDefinition Width="32"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Grid.Resources>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="FontWeight" Value="Bold"></Setter>
+                                        </Style>
+                                    </Grid.Resources>
+                                    <TextBlock Grid.Column="0" Text="序号"/>
+                                    <TextBlock Grid.Column="1" Text="文件名"/>
+                                    <TextBlock Grid.Column="2" Text="类型"/>
+                                    <TextBlock Grid.Column="3" Text="操作"/>
+                                </Grid>
+                                <ItemsRepeater ItemsSource="{x:Bind FileInfos, Mode=OneWay}">
+                                    <ItemsRepeater.ItemTemplate>
+                                        <DataTemplate x:DataType="model:RecievedFile">
+                                            <StackPanel>
+                                                <Grid Margin="10,0,12,0">
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="40"/>
+                                                        <ColumnDefinition Width="*"/>
+                                                        <ColumnDefinition Width="70"/>
+                                                        <ColumnDefinition Width="42"/>
+                                                        <ColumnDefinition Width="32"/>
+                                                    </Grid.ColumnDefinitions>
+                                                    <TextBlock Grid.Column="0" Text="{x:Bind Id, Mode=OneWay}" VerticalAlignment="Center"/>
+                                                    <TextBlock Grid.Column="1" Text="{x:Bind Name, Mode=OneWay}" VerticalAlignment="Center"/>
+                                                    <TextBlock Grid.Column="2" Text="{x:Bind FileTypeString, Mode=OneWay}" VerticalAlignment="Center"/>
+                                                    <Button Grid.Column="3">
+                                                        <Viewbox MinHeight="15" MinWidth="15">
+                                                            <SymbolIcon Symbol="{x:Bind FileType, Mode=OneWay}"/>
+                                                        </Viewbox>
+                                                    </Button>
+                                                </Grid>
+                                                <Border BorderThickness="1" Height="1" Visibility="{x:Bind BorderVisibility, Mode=OneWay}"
+                                                        BorderBrush="{ThemeResource AppBarBorderThemeBrush}" Margin="0,3,0,3"/>
+                                            </StackPanel>
+                                        </DataTemplate>
+                                    </ItemsRepeater.ItemTemplate>
+                                </ItemsRepeater>
+                            </StackPanel>
+                        </Expander>
+                    </DataTemplate>
+                </ItemsRepeater.ItemTemplate>
+            </ItemsRepeater>
+        </ScrollViewer>
+
+    </Grid>
+</Page>
