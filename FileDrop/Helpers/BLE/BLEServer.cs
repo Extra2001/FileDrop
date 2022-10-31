@@ -18,7 +18,7 @@ namespace FileDrop.Helpers.BLE
         private static GattLocalCharacteristic appInfoCharacteristic;
 
         public static bool Started =>
-            serviceProvider.AdvertisementStatus != GattServiceProviderAdvertisementStatus.Stopped ||
+            serviceProvider.AdvertisementStatus != GattServiceProviderAdvertisementStatus.Stopped &&
             serviceProvider.AdvertisementStatus != GattServiceProviderAdvertisementStatus.Aborted;
 
         public static void StartServer()

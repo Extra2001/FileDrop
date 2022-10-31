@@ -33,6 +33,13 @@ namespace FileDrop.Pages
         {
             base.OnNavigatedTo(e);
             LoadToSendFile();
+            BLEClient.StartBleDeviceWatcher();
+        }
+
+        protected override void OnNavigatedFrom(NavigationEventArgs e)
+        {
+            base.OnNavigatedFrom(e);
+            BLEClient.StopBleDeviceWatcher();
         }
 
         private async void addFileButton_Click(object sender, RoutedEventArgs e)
@@ -107,13 +114,6 @@ namespace FileDrop.Pages
         private async void sendButton_Click(object sender, RoutedEventArgs e)
         {
             var info = await PrepareFile.Prepare(toSendFiles);
-
-            if (await BLEServer.InitServiceAsync())
-                BLEServer.StartServer();
-
-            if (BLEServer.Started)
-                BLEServer.StopServer();
-            BLEClient.StartBleDeviceWatcher();
         }
     }
 }
