@@ -1,4 +1,4 @@
-﻿using FileDrop.Models.BluetoothLE;
+﻿using FileDrop.Models;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -18,9 +18,15 @@ namespace FileDrop.Helpers.BLE
     public static class BLEClient
     {
         private static List<DeviceInformation> Devices = new List<DeviceInformation>();
-        private static List<DeviceContent> deviceContents = new List<DeviceContent>();
+        public static ObservableCollection<DeviceContent> deviceContents
+            = new ObservableCollection<DeviceContent>();
 
         private static DeviceWatcher deviceWatcher;
+
+        #region Events
+        public delegate void _EnumerateComplete();
+        public static event _EnumerateComplete ScanComplete;
+        #endregion
 
         #region Error Codes
         private static int E_BLUETOOTH_ATT_WRITE_NOT_PERMITTED = unchecked((int)0x80650003);
@@ -55,7 +61,6 @@ namespace FileDrop.Helpers.BLE
 
             deviceWatcher.Start();
         }
-
         public static void StopBleDeviceWatcher()
         {
             if (deviceWatcher != null)
@@ -72,13 +77,11 @@ namespace FileDrop.Helpers.BLE
                 deviceWatcher = null;
             }
         }
-
         private static void DeviceWatcher_Added(DeviceWatcher sender, DeviceInformation deviceInfo)
         {
             Devices.Add(deviceInfo);
             ConnectDevice(deviceInfo);
         }
-
         private static void DeviceWatcher_Updated(DeviceWatcher sender, DeviceInformationUpdate deviceInfoUpdate)
         {
             var id = deviceInfoUpdate.Id;
@@ -87,7 +90,6 @@ namespace FileDrop.Helpers.BLE
             d.Update(deviceInfoUpdate);
             ConnectDevice(d);
         }
-
         private static void DeviceWatcher_Removed(DeviceWatcher sender, DeviceInformationUpdate deviceInfoUpdate)
         {
             var id = deviceInfoUpdate.Id;
@@ -98,17 +100,15 @@ namespace FileDrop.Helpers.BLE
             if (d != null)
                 Devices.Remove(d);
         }
-
-        private static void DeviceWatcher_EnumerationCompleted(DeviceWatcher sender, object e)
+        private static void DeviceWatcher_EnumerationCompleted
+            (DeviceWatcher sender, object e)
         {
-
+            ScanComplete?.Invoke();
         }
-
         private static void DeviceWatcher_Stopped(DeviceWatcher sender, object e)
         {
-
+            ScanComplete?.Invoke();
         }
-
         private static async void ConnectDevice(DeviceInformation deviceInfo)
         {
             try
@@ -118,7 +118,7 @@ namespace FileDrop.Helpers.BLE
                     await IsSupported(deviceInfo, bluetoothLeDevice);
                 }
             }
-            catch (ArgumentOutOfRangeException ex)
+            catch (ArgumentException ex)
             {
                 throw new Exception("请重新安装蓝牙驱动。", ex);
             }
@@ -127,10 +127,8 @@ namespace FileDrop.Helpers.BLE
                 throw new Exception("蓝牙未开启。", ex);
             }
         }
-
         private static async Task<bool> IsSupported(DeviceInformation deviceInfo, BluetoothLEDevice device)
         {
-
             GattDeviceServicesResult result = await device.GetGattServicesAsync();
             if (result.Status == GattCommunicationStatus.Success)
             {
@@ -150,12 +148,7 @@ namespace FileDrop.Helpers.BLE
                         var appInfoRes = await appInfoCha.ReadValueAsync(BluetoothCacheMode.Uncached);
                         if (appInfoRes.Status == GattCommunicationStatus.Success)
                         {
-                            var length = appInfoRes.Value.Length;
-                            var reader = DataReader.FromBuffer(appInfoRes.Value);
-                            var bytes = new byte[length];
-                            reader.ReadBytes(bytes);
-                            string appInfo = Encoding.UTF8.GetString(bytes);
-
+                            string appInfo = appInfoRes.Value.Parse<AppInfo>().DeviceName;
                             return UpdateDeviceContents(deviceInfo, appInfo);
                         }
                     }
@@ -163,7 +156,6 @@ namespace FileDrop.Helpers.BLE
             }
             return UpdateDeviceContents(deviceInfo, null);
         }
-
         private static bool UpdateDeviceContents(DeviceInformation deviceInfo, string deviceName)
         {
             var dc = deviceContents.Where(x => x.deviceInfo.Id == deviceInfo.Id).FirstOrDefault();
@@ -171,13 +163,17 @@ namespace FileDrop.Helpers.BLE
 
             if (dc == null)
             {
+                int id = 1;
+                if (deviceContents.Any())
+                    id = deviceContents.Select(x => x.Id).Max() + 1;
                 deviceContents.Add(new DeviceContent()
                 {
+                    Id = id,
                     deviceName = deviceName,
                     deviceInfo = deviceInfo
                 });
             }
-            else if(deviceName == null)
+            else if (deviceName == null)
             {
                 deviceContents.Remove(dc);
                 return false;

@@ -24,6 +24,9 @@ namespace FileDrop.Pages
     {
         public ObservableCollection<ToSendFile> toSendFiles = new ObservableCollection<ToSendFile>();
 
+        public ObservableCollection<AppInfoView> deviceContents
+            = new ObservableCollection<AppInfoView>();
+
         public TransferPage()
         {
             this.InitializeComponent();
@@ -33,12 +36,50 @@ namespace FileDrop.Pages
         {
             base.OnNavigatedTo(e);
             LoadToSendFile();
-            BLEClient.StartBleDeviceWatcher();
+            InitBLE();
         }
-
+        private void InitBLE()
+        {
+            BLEClient.deviceContents.CollectionChanged += DeviceContents_CollectionChanged;
+            BLEClient.StartBleDeviceWatcher();
+            BLEClient.ScanComplete += BLEClient_ScanComplete;
+        }
+        private void DeviceContents_CollectionChanged(object sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
+        {
+            if (e.Action == System.Collections.Specialized.NotifyCollectionChangedAction.Add)
+            {
+                var item = e.NewItems[0] as DeviceContent;
+                item.PropertyChanged += DeviceContent_PropertyChanged;
+                deviceContents.Add(item.ToAppInfoView());
+            }
+            else if (e.Action == System.Collections.Specialized.NotifyCollectionChangedAction.Reset)
+            {
+                deviceContents.Clear();
+            }
+            else if (e.Action == System.Collections.Specialized.NotifyCollectionChangedAction.Remove)
+            {
+                var item = e.OldItems[0] as DeviceContent;
+                item.PropertyChanged -= DeviceContent_PropertyChanged;
+                var find = deviceContents.Where(x => x.Id == item.Id).FirstOrDefault();
+                if (find != null)
+                    deviceContents.Remove(find);
+            }
+        }
+        private void DeviceContent_PropertyChanged(object sender, System.ComponentModel.PropertyChangedEventArgs e)
+        {
+            var dc = sender as DeviceContent;
+            var find = deviceContents.Where(x => x.Id == dc.Id).FirstOrDefault();
+            if (find != null)
+                find.DeviceName = dc.deviceName;
+        }
+        private void BLEClient_ScanComplete()
+        {
+            
+        }
         protected override void OnNavigatedFrom(NavigationEventArgs e)
         {
             base.OnNavigatedFrom(e);
+            BLEClient.ScanComplete -= BLEClient_ScanComplete;
             BLEClient.StopBleDeviceWatcher();
         }
 

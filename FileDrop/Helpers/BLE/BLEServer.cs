@@ -119,23 +119,11 @@ namespace FileDrop.Helpers.BLE
         private static async void AppInfoCharacteristic_ReadRequested
             (GattLocalCharacteristic sender, GattReadRequestedEventArgs args)
         {
-            // BT_Code: Process a read request. 
             using (args.GetDeferral())
             {
-                // Get the request information.  This requires device access before an app can access the device's request. 
                 GattReadRequest request = await args.GetRequestAsync();
-                if (request == null)
-                {
-                    // No access allowed to the device.  Application should indicate this to the user.
-                    return;
-                }
-
-                var writer = new DataWriter();
-                writer.ByteOrder = ByteOrder.LittleEndian;
-                var str = "{hh}";
-                writer.WriteBytes(Encoding.UTF8.GetBytes(str));
-
-                // Gatt code to handle the response
+                if (request == null) return;
+                var writer = BLEParser.GetAppInfoWriter();
                 request.RespondWithValue(writer.DetachBuffer());
             }
         }

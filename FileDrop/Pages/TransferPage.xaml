@@ -108,6 +108,17 @@
                         </Viewbox>
                     </Button>
                 </Grid>
+                <ScrollViewer>
+                    <RadioButtons>
+                        <ItemsRepeater ItemsSource="{x:Bind deviceContents, Mode=OneWay}">
+                            <ItemsRepeater.ItemTemplate>
+                                <DataTemplate x:DataType="model:AppInfoView">
+                                    <RadioButton Content="{x:Bind DeviceName, Mode=OneWay}" IsChecked="{x:Bind Checked, Mode=TwoWay}"/>
+                                </DataTemplate>
+                            </ItemsRepeater.ItemTemplate>
+                        </ItemsRepeater>
+                    </RadioButtons>
+                </ScrollViewer>
             </StackPanel>
 
             <Button Grid.Row="4" Grid.ColumnSpan="2" Margin="10" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
