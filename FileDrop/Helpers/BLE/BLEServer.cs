@@ -26,7 +26,7 @@ namespace FileDrop.Helpers.BLE
             GattServiceProviderAdvertisingParameters advParameters = new GattServiceProviderAdvertisingParameters
             {
                 IsConnectable = true,
-                IsDiscoverable = true
+                IsDiscoverable = false
             };
             serviceProvider.StartAdvertising(advParameters);
         }

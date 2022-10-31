@@ -1,14 +1,16 @@
 ﻿using FileDrop.Models.BluetoothLE;
-using InTheHand.Bluetooth;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
+using System.Reflection.PortableExecutable;
 using System.Text;
 using System.Threading.Tasks;
+using Windows.ApplicationModel.DataTransfer;
 using Windows.Devices.Bluetooth;
 using Windows.Devices.Bluetooth.GenericAttributeProfile;
 using Windows.Devices.Enumeration;
+using Windows.Storage.Streams;
 using Windows.UI.Core;
 
 namespace FileDrop.Helpers.BLE
@@ -20,37 +22,40 @@ namespace FileDrop.Helpers.BLE
 
         private static DeviceWatcher deviceWatcher;
 
+        #region Error Codes
+        private static int E_BLUETOOTH_ATT_WRITE_NOT_PERMITTED = unchecked((int)0x80650003);
+        private static int E_BLUETOOTH_ATT_INVALID_PDU = unchecked((int)0x80650004);
+        private static int E_ACCESSDENIED = unchecked((int)0x80070005);
+        private static int E_DEVICE_NOT_AVAILABLE = unchecked((int)0x800710df);
+        #endregion
+
         public static void StartBleDeviceWatcher()
         {
-            // Additional properties we would like about the device.
-            // Property strings are documented here https://msdn.microsoft.com/en-us/library/windows/desktop/ff521659(v=vs.85).aspx
-            string[] requestedProperties = { "System.Devices.Aep.DeviceAddress", "System.Devices.Aep.IsConnected", "System.Devices.Aep.Bluetooth.Le.IsConnectable", "System.Devices.Aep.IsPresent" };
+            if (deviceWatcher == null)
+            {
+                string[] requestedProperties = { "System.Devices.Aep.DeviceAddress", "System.Devices.Aep.IsConnected", "System.Devices.Aep.Bluetooth.Le.IsConnectable", "System.Devices.Aep.IsPresent" };
 
-            // BT_Code: Example showing paired and non-paired in a single query.
-            string aqsAllBluetoothLEDevices = "(System.Devices.Aep.ProtocolId:=\"{bb7bb05e-5972-42b5-94fc-76eaa7084d49}\")";
+                string aqsAllBluetoothLEDevices = "(System.Devices.Aep.ProtocolId:=\"{bb7bb05e-5972-42b5-94fc-76eaa7084d49}\")";
 
-            deviceWatcher =
-                    DeviceInformation.CreateWatcher(
-                        aqsAllBluetoothLEDevices,
-                        requestedProperties,
-                        DeviceInformationKind.AssociationEndpoint);
+                deviceWatcher =
+                        DeviceInformation.CreateWatcher(
+                            aqsAllBluetoothLEDevices,
+                            requestedProperties,
+                            DeviceInformationKind.AssociationEndpoint);
 
-            // Register event handlers before starting the watcher.
-            deviceWatcher.Added += DeviceWatcher_Added;
-            deviceWatcher.Updated += DeviceWatcher_Updated;
-            deviceWatcher.Removed += DeviceWatcher_Removed;
-            deviceWatcher.EnumerationCompleted += DeviceWatcher_EnumerationCompleted;
-            deviceWatcher.Stopped += DeviceWatcher_Stopped;
+                deviceWatcher.Added += DeviceWatcher_Added;
+                deviceWatcher.Updated += DeviceWatcher_Updated;
+                deviceWatcher.Removed += DeviceWatcher_Removed;
+                deviceWatcher.EnumerationCompleted += DeviceWatcher_EnumerationCompleted;
+                deviceWatcher.Stopped += DeviceWatcher_Stopped;
+            }
 
-            // Start over with an empty collection.
             Devices.Clear();
+            deviceContents.Clear();
 
             deviceWatcher.Start();
         }
 
-        /// <summary>
-        /// Stops watching for all nearby Bluetooth devices.
-        /// </summary>
         public static void StopBleDeviceWatcher()
         {
             if (deviceWatcher != null)
@@ -68,37 +73,38 @@ namespace FileDrop.Helpers.BLE
             }
         }
 
-        private static async void DeviceWatcher_Added(DeviceWatcher sender, DeviceInformation deviceInfo)
+        private static void DeviceWatcher_Added(DeviceWatcher sender, DeviceInformation deviceInfo)
         {
             Devices.Add(deviceInfo);
             ConnectDevice(deviceInfo);
         }
 
-        private static async void DeviceWatcher_Updated(DeviceWatcher sender, DeviceInformationUpdate deviceInfoUpdate)
+        private static void DeviceWatcher_Updated(DeviceWatcher sender, DeviceInformationUpdate deviceInfoUpdate)
+        {
+            var id = deviceInfoUpdate.Id;
+            var d = Devices.Where(x => x.Id == id).FirstOrDefault();
+            if (d == null) return;
+            d.Update(deviceInfoUpdate);
+            ConnectDevice(d);
+        }
+
+        private static void DeviceWatcher_Removed(DeviceWatcher sender, DeviceInformationUpdate deviceInfoUpdate)
         {
             var id = deviceInfoUpdate.Id;
             var dc = deviceContents.Where(x => x.deviceInfo.Id == id).FirstOrDefault();
-            if (dc == null) return;
-            dc.deviceInfo.Update(deviceInfoUpdate);
-            var deviceInfo = dc.deviceInfo;
-            Devices.Add(deviceInfo);
-            ConnectDevice(deviceInfo);
+            var d = Devices.Where(x => x.Id == id).FirstOrDefault();
+            if (dc != null)
+                deviceContents.Remove(dc);
+            if (d != null)
+                Devices.Remove(d);
         }
 
-        private static async void DeviceWatcher_Removed(DeviceWatcher sender, DeviceInformationUpdate deviceInfoUpdate)
-        {
-            var id = deviceInfoUpdate.Id;
-            var dc = deviceContents.Where(x => x.deviceInfo.Id == id).FirstOrDefault();
-            if (dc == null) return;
-            deviceContents.Remove(dc);
-        }
-
-        private static async void DeviceWatcher_EnumerationCompleted(DeviceWatcher sender, object e)
+        private static void DeviceWatcher_EnumerationCompleted(DeviceWatcher sender, object e)
         {
 
         }
 
-        private static async void DeviceWatcher_Stopped(DeviceWatcher sender, object e)
+        private static void DeviceWatcher_Stopped(DeviceWatcher sender, object e)
         {
 
         }
@@ -109,27 +115,79 @@ namespace FileDrop.Helpers.BLE
             {
                 using (BluetoothLEDevice bluetoothLeDevice = await BluetoothLEDevice.FromIdAsync(deviceInfo.Id))
                 {
-                    GattDeviceServicesResult result = await bluetoothLeDevice.GetGattServicesAsync();
-                    if (result.Status == GattCommunicationStatus.Success)
+                    await IsSupported(deviceInfo, bluetoothLeDevice);
+                }
+            }
+            catch (ArgumentOutOfRangeException ex)
+            {
+                throw new Exception("请重新安装蓝牙驱动。", ex);
+            }
+            catch (Exception ex) when (ex.HResult == E_DEVICE_NOT_AVAILABLE)
+            {
+                throw new Exception("蓝牙未开启。", ex);
+            }
+        }
+
+        private static async Task<bool> IsSupported(DeviceInformation deviceInfo, BluetoothLEDevice device)
+        {
+
+            GattDeviceServicesResult result = await device.GetGattServicesAsync();
+            if (result.Status == GattCommunicationStatus.Success)
+            {
+                var services = result.Services;
+                var service = services.Where(x => x.Uuid == ServiceDefinition.ServiceUUID).FirstOrDefault();
+                if (service == null) return UpdateDeviceContents(deviceInfo, null);
+                var accessStatus = await service.RequestAccessAsync();
+                if (accessStatus == DeviceAccessStatus.Allowed)
+                {
+                    var cha = await service.GetCharacteristicsAsync(BluetoothCacheMode.Uncached);
+                    if (cha.Status == GattCommunicationStatus.Success)
                     {
-                        var services = result.Services;
-                        var service = services.Where(x => x.Uuid == ServiceDefinition.ServiceUUID).FirstOrDefault();
-                        if (service == null) return;
-                        deviceContents.Add(new DeviceContent()
+                        var characteristics = cha.Characteristics;
+                        var appInfoCha = characteristics
+                            .Where(x => x.Uuid == ServiceDefinition.AppInfoCharacteristic).FirstOrDefault();
+                        if (appInfoCha == null) return UpdateDeviceContents(deviceInfo, null);
+                        var appInfoRes = await appInfoCha.ReadValueAsync(BluetoothCacheMode.Uncached);
+                        if (appInfoRes.Status == GattCommunicationStatus.Success)
                         {
-                            deviceInfo = deviceInfo,
-                            service = service,
-                            applySendCharacteristic = service
-                                .GetCharacteristics(ServiceDefinition.ApplySendCharacteristic).FirstOrDefault(),
-                            appInfoCharacteristic = service
-                                .GetCharacteristics(ServiceDefinition.AppInfoCharacteristic).FirstOrDefault(),
-                            permitCharacteristic = service
-                                .GetCharacteristics(ServiceDefinition.PermitCharacteristic).FirstOrDefault()
-                        });
+                            var length = appInfoRes.Value.Length;
+                            var reader = DataReader.FromBuffer(appInfoRes.Value);
+                            var bytes = new byte[length];
+                            reader.ReadBytes(bytes);
+                            string appInfo = Encoding.UTF8.GetString(bytes);
+
+                            return UpdateDeviceContents(deviceInfo, appInfo);
+                        }
                     }
                 }
             }
-            catch { }
+            return UpdateDeviceContents(deviceInfo, null);
+        }
+
+        private static bool UpdateDeviceContents(DeviceInformation deviceInfo, string deviceName)
+        {
+            var dc = deviceContents.Where(x => x.deviceInfo.Id == deviceInfo.Id).FirstOrDefault();
+            if (dc == null && string.IsNullOrEmpty(deviceName)) return false;
+
+            if (dc == null)
+            {
+                deviceContents.Add(new DeviceContent()
+                {
+                    deviceName = deviceName,
+                    deviceInfo = deviceInfo
+                });
+            }
+            else if(deviceName == null)
+            {
+                deviceContents.Remove(dc);
+                return false;
+            }
+            else
+            {
+                dc.deviceName = deviceName;
+            }
+
+            return true;
         }
     }
 }
