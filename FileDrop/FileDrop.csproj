@@ -12,6 +12,7 @@
     <EnableMsixTooling>true</EnableMsixTooling>
   </PropertyGroup>
   <ItemGroup>
+    <None Remove="Pages\Dialogs\Toast.xaml" />
     <None Remove="Pages\RecievePage.xaml" />
     <None Remove="Pages\SettingsPage.xaml" />
     <None Remove="Pages\TransferPage.xaml" />
@@ -28,9 +29,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="InTheHand.BluetoothLE" Version="4.0.25" />
     <PackageReference Include="LiteDB" Version="5.0.12" />
-    <PackageReference Include="Microsoft.WindowsAppSDK" Version="1.1.5" />
-    <PackageReference Include="Microsoft.Windows.SDK.BuildTools" Version="10.0.22621.755" />
+    <PackageReference Include="Microsoft.WindowsAppSDK" Version="1.2.220930.4-preview2" />
+    <PackageReference Include="Microsoft.Windows.SDK.BuildTools" Version="10.0.25231-preview" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
     <PackageReference Include="SharpZipLib" Version="1.4.0" />
     <Manifest Include="$(ApplicationManifest)" />
@@ -61,6 +63,11 @@
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Helpers\WiFiDirect\" />
+  </ItemGroup>
+  <ItemGroup>
+    <Page Update="Pages\Dialogs\Toast.xaml">
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
   </ItemGroup>
 
   <!-- 

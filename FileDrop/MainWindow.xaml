@@ -11,12 +11,13 @@
         <Grid.RowDefinitions>
             <RowDefinition Height="48"/>
             <RowDefinition Height="*"/>
+            <RowDefinition Height="60"/>
         </Grid.RowDefinitions>
         <Border x:Name="AppTitleBar" IsHitTestVisible="True" VerticalAlignment="Top" Background="Transparent">
             <TextBlock x:Name="AppTitle" Text="FileDrop" VerticalAlignment="Top" Margin="20,8,0,8" />
         </Border>
 
-        <NavigationView x:Name="navView" Grid.Row="1"
+        <NavigationView x:Name="navView" Grid.Row="1" Grid.RowSpan="2"
                         IsBackButtonVisible="Collapsed"
                         IsSettingsVisible="False"
                         SelectionChanged="navView_SelectionChanged">
@@ -30,5 +31,8 @@
 
             <Frame x:Name="contentFrame" />
         </NavigationView>
+
+        <Grid x:Name="toastGrid" Grid.Row="2"/>
+
     </Grid>
 </Window>

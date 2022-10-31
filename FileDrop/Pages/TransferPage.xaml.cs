@@ -1,4 +1,5 @@
 ﻿using FileDrop.Helpers;
+using FileDrop.Helpers.BLE;
 using FileDrop.Models;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
@@ -13,6 +14,7 @@ using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices.WindowsRuntime;
+using System.Threading.Tasks;
 using Windows.Foundation;
 using Windows.Foundation.Collections;
 
@@ -105,6 +107,13 @@ namespace FileDrop.Pages
         private async void sendButton_Click(object sender, RoutedEventArgs e)
         {
             var info = await PrepareFile.Prepare(toSendFiles);
+
+            if (await BLEServer.InitServiceAsync())
+                BLEServer.StartServer();
+
+            if (BLEServer.Started)
+                BLEServer.StopServer();
+            BLEClient.StartBleDeviceWatcher();
         }
     }
 }
