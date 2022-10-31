@@ -104,25 +104,29 @@ namespace FileDrop.Helpers.BLE
 
         private static async void ConnectDevice(DeviceInformation deviceInfo)
         {
-            BluetoothLEDevice bluetoothLeDevice = await BluetoothLEDevice.FromIdAsync(deviceInfo.Id);
-            GattDeviceServicesResult result = await bluetoothLeDevice.GetGattServicesAsync();
-            if (result.Status == GattCommunicationStatus.Success)
+            try
             {
-                var services = result.Services;
-                var service = services.Where(x => x.Uuid == ServiceDefinition.ServiceUUID).FirstOrDefault();
-                if (service == null) return;
-                deviceContents.Add(new DeviceContent()
+                BluetoothLEDevice bluetoothLeDevice = await BluetoothLEDevice.FromIdAsync(deviceInfo.Id);
+                GattDeviceServicesResult result = await bluetoothLeDevice.GetGattServicesAsync();
+                if (result.Status == GattCommunicationStatus.Success)
                 {
-                    deviceInfo = deviceInfo,
-                    service = service,
-                    applySendCharacteristic = service
-                        .GetCharacteristics(ServiceDefinition.ApplySendCharacteristic).FirstOrDefault(),
-                    appInfoCharacteristic = service
-                        .GetCharacteristics(ServiceDefinition.AppInfoCharacteristic).FirstOrDefault(),
-                    permitCharacteristic = service
-                        .GetCharacteristics(ServiceDefinition.PermitCharacteristic).FirstOrDefault()
-                });
+                    var services = result.Services;
+                    var service = services.Where(x => x.Uuid == ServiceDefinition.ServiceUUID).FirstOrDefault();
+                    if (service == null) return;
+                    deviceContents.Add(new DeviceContent()
+                    {
+                        deviceInfo = deviceInfo,
+                        service = service,
+                        applySendCharacteristic = service
+                            .GetCharacteristics(ServiceDefinition.ApplySendCharacteristic).FirstOrDefault(),
+                        appInfoCharacteristic = service
+                            .GetCharacteristics(ServiceDefinition.AppInfoCharacteristic).FirstOrDefault(),
+                        permitCharacteristic = service
+                            .GetCharacteristics(ServiceDefinition.PermitCharacteristic).FirstOrDefault()
+                    });
+                }
             }
+            catch { }
         }
     }
 }

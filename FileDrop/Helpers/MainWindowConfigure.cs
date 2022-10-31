@@ -173,6 +173,7 @@ namespace FileDrop.Helpers
         }
         private async void StartBLEServer()
         {
+            bool res = await BLECheck.CheckComeptivity();
             if (await BLEServer.InitServiceAsync())
                 BLEServer.StartServer();
         }
