@@ -19,8 +19,6 @@ namespace FileDrop.Helpers.BLE
         private static List<DeviceContent> deviceContents = new List<DeviceContent>();
 
         private static DeviceWatcher deviceWatcher;
-        private static BluetoothLEDevice bluetoothLeDevice;
-        private static bool subscribedForNotifications;
 
         public static void StartBleDeviceWatcher()
         {
@@ -109,35 +107,29 @@ namespace FileDrop.Helpers.BLE
         {
             try
             {
-                if (!await ClearBluetoothLEDeviceAsync()) return;
-                BluetoothLEDevice bluetoothLeDevice = await BluetoothLEDevice.FromIdAsync(deviceInfo.Id);
-                GattDeviceServicesResult result = await bluetoothLeDevice.GetGattServicesAsync();
-                if (result.Status == GattCommunicationStatus.Success)
+                using (BluetoothLEDevice bluetoothLeDevice = await BluetoothLEDevice.FromIdAsync(deviceInfo.Id))
                 {
-                    var services = result.Services;
-                    var service = services.Where(x => x.Uuid == ServiceDefinition.ServiceUUID).FirstOrDefault();
-                    if (service == null) return;
-                    deviceContents.Add(new DeviceContent()
+                    GattDeviceServicesResult result = await bluetoothLeDevice.GetGattServicesAsync();
+                    if (result.Status == GattCommunicationStatus.Success)
                     {
-                        deviceInfo = deviceInfo,
-                        service = service,
-                        applySendCharacteristic = service
-                            .GetCharacteristics(ServiceDefinition.ApplySendCharacteristic).FirstOrDefault(),
-                        appInfoCharacteristic = service
-                            .GetCharacteristics(ServiceDefinition.AppInfoCharacteristic).FirstOrDefault(),
-                        permitCharacteristic = service
-                            .GetCharacteristics(ServiceDefinition.PermitCharacteristic).FirstOrDefault()
-                    });
+                        var services = result.Services;
+                        var service = services.Where(x => x.Uuid == ServiceDefinition.ServiceUUID).FirstOrDefault();
+                        if (service == null) return;
+                        deviceContents.Add(new DeviceContent()
+                        {
+                            deviceInfo = deviceInfo,
+                            service = service,
+                            applySendCharacteristic = service
+                                .GetCharacteristics(ServiceDefinition.ApplySendCharacteristic).FirstOrDefault(),
+                            appInfoCharacteristic = service
+                                .GetCharacteristics(ServiceDefinition.AppInfoCharacteristic).FirstOrDefault(),
+                            permitCharacteristic = service
+                                .GetCharacteristics(ServiceDefinition.PermitCharacteristic).FirstOrDefault()
+                        });
+                    }
                 }
             }
             catch { }
-        }
-
-        private static async Task<bool> ClearBluetoothLEDeviceAsync()
-        {
-            bluetoothLeDevice?.Dispose();
-            bluetoothLeDevice = null;
-            return true;
         }
     }
 }
