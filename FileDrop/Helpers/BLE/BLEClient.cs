@@ -1,4 +1,5 @@
 ﻿using FileDrop.Models.BluetoothLE;
+using InTheHand.Bluetooth;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -18,6 +19,8 @@ namespace FileDrop.Helpers.BLE
         private static List<DeviceContent> deviceContents = new List<DeviceContent>();
 
         private static DeviceWatcher deviceWatcher;
+        private static BluetoothLEDevice bluetoothLeDevice;
+        private static bool subscribedForNotifications;
 
         public static void StartBleDeviceWatcher()
         {
@@ -106,6 +109,7 @@ namespace FileDrop.Helpers.BLE
         {
             try
             {
+                if (!await ClearBluetoothLEDeviceAsync()) return;
                 BluetoothLEDevice bluetoothLeDevice = await BluetoothLEDevice.FromIdAsync(deviceInfo.Id);
                 GattDeviceServicesResult result = await bluetoothLeDevice.GetGattServicesAsync();
                 if (result.Status == GattCommunicationStatus.Success)
@@ -127,6 +131,13 @@ namespace FileDrop.Helpers.BLE
                 }
             }
             catch { }
+        }
+
+        private static async Task<bool> ClearBluetoothLEDeviceAsync()
+        {
+            bluetoothLeDevice?.Dispose();
+            bluetoothLeDevice = null;
+            return true;
         }
     }
 }
