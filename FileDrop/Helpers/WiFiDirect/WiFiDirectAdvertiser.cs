@@ -53,6 +53,8 @@ namespace FileDrop.Helpers.WiFiDirect
             _publisher.Stop();
             _publisher.StatusChanged -= OnStatusChanged;
             _listener.ConnectionRequested -= OnConnectionRequested;
+            connectedDevice?.Dispose();
+            connectedDevice = null;
         }
 
         private static async Task<bool> HandleConnectionRequestAsync
