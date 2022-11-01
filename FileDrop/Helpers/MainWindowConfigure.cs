@@ -15,6 +15,7 @@ using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml.Controls;
 using System.IO;
 using FileDrop.Helpers.BLE;
+using FileDrop.Helpers.WiFiDirect;
 
 namespace FileDrop.Helpers
 {
@@ -42,6 +43,7 @@ namespace FileDrop.Helpers
             SetCustomTitleBar(customTitleBar);
             TrySetSystemBackdrop();
             StartBLEServer();
+            WiFiDirectAdvertiser.StartAdvertisement();
         }
 
         #region 设置应用背景

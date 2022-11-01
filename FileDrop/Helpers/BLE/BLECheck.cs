@@ -22,6 +22,7 @@ namespace FileDrop.Helpers.BLE
 
             if (localAdapter != null)
             {
+                
                 return localAdapter.IsPeripheralRoleSupported;
             }
             else

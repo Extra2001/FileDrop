@@ -61,9 +61,6 @@
     </Page>
   </ItemGroup>
   <ItemGroup>
-    <Folder Include="Helpers\WiFiDirect\" />
-  </ItemGroup>
-  <ItemGroup>
     <Page Update="Pages\Dialogs\Toast.xaml">
       <Generator>MSBuild:Compile</Generator>
     </Page>

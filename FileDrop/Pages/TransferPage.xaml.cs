@@ -1,5 +1,6 @@
 ﻿using FileDrop.Helpers;
 using FileDrop.Helpers.BLE;
+using FileDrop.Helpers.WiFiDirect;
 using FileDrop.Models;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
@@ -36,8 +37,28 @@ namespace FileDrop.Pages
         {
             base.OnNavigatedTo(e);
             LoadToSendFile();
-            InitBLE();
+            InitWiFiDirect();
         }
+        protected override void OnNavigatedFrom(NavigationEventArgs e)
+        {
+            base.OnNavigatedFrom(e);
+            //BLEClient.ScanComplete -= BLEClient_ScanComplete;
+            //BLEClient.StopBleDeviceWatcher();
+            WiFiDirectConnector.ScanComplete -= WiFiDirectConnector_ScanComplete;
+            WiFiDirectConnector.StopWatcher();
+        }
+        private void InitWiFiDirect()
+        {
+            WiFiDirectConnector.deviceContents.CollectionChanged += DeviceContents_CollectionChanged;
+            WiFiDirectConnector.StartWatcher();
+            WiFiDirectConnector.ScanComplete += WiFiDirectConnector_ScanComplete;
+        }
+
+        private void WiFiDirectConnector_ScanComplete()
+        {
+            
+        }
+
         private void InitBLE()
         {
             BLEClient.deviceContents.CollectionChanged += DeviceContents_CollectionChanged;
@@ -75,12 +96,6 @@ namespace FileDrop.Pages
         private void BLEClient_ScanComplete()
         {
             
-        }
-        protected override void OnNavigatedFrom(NavigationEventArgs e)
-        {
-            base.OnNavigatedFrom(e);
-            BLEClient.ScanComplete -= BLEClient_ScanComplete;
-            BLEClient.StopBleDeviceWatcher();
         }
 
         private async void addFileButton_Click(object sender, RoutedEventArgs e)
