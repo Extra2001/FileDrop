@@ -75,59 +75,60 @@ namespace FileDrop.Helpers.WiFiDirect
 
         public async Task<SocketRead> ReadAsync()
         {
-            try
+
+            uint bytesRead = await _dataReader.LoadAsync(sizeof(uint));
+            if (bytesRead > 0)
             {
-                uint bytesRead = await _dataReader.LoadAsync(sizeof(uint));
+                uint infoLength = _dataReader.ReadUInt32();
+                bytesRead = await _dataReader.LoadAsync(sizeof(uint));
                 if (bytesRead > 0)
                 {
-                    uint infoLength = _dataReader.ReadUInt32();
-                    bytesRead = await _dataReader.LoadAsync(sizeof(uint));
+                    uint payloadLength = _dataReader.ReadUInt32();
+                    bytesRead = await _dataReader.LoadAsync(infoLength);
                     if (bytesRead > 0)
                     {
-                        uint payloadLength = _dataReader.ReadUInt32();
-                        bytesRead = await _dataReader.LoadAsync(infoLength);
-                        if (bytesRead > 0)
+                        string info = _dataReader.ReadString(infoLength);
+                        if (payloadLength == 0)
                         {
-                            string info = _dataReader.ReadString(infoLength);
-                            if (payloadLength == 0)
+                            return new SocketRead()
                             {
+                                payload = null,
+                                info = info
+                            };
+                        }
+                        else
+                        {
+                            bytesRead = await _dataReader.LoadAsync(payloadLength);
+                            if (bytesRead > 0)
+                            {
+                                var payload = _dataReader.ReadBuffer(payloadLength);
                                 return new SocketRead()
                                 {
-                                    payload = null,
+                                    payload = payload,
                                     info = info
                                 };
-                            }
-                            else
-                            {
-                                bytesRead = await _dataReader.LoadAsync(payloadLength);
-                                if (bytesRead > 0)
-                                {
-                                    var payload = _dataReader.ReadBuffer(payloadLength);
-                                    return new SocketRead()
-                                    {
-                                        payload = payload,
-                                        info = info
-                                    };
-                                }
                             }
                         }
                     }
                 }
             }
-            catch (Exception)
-            { }
+
             return null;
         }
 
         public async void StartRead(Action<SocketRead> action)
         {
-            SocketRead read;
-            do
+            try
             {
-                read = await ReadAsync();
-                action(read);
+                SocketRead read;
+                while (true)
+                {
+                    read = await ReadAsync();
+                    action(read);
+                }
             }
-            while (read != null);
+            catch (Exception)
+            { }
         }
 
         public class SocketRead

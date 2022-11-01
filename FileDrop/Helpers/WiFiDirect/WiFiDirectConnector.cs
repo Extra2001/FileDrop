@@ -65,12 +65,15 @@ namespace FileDrop.Helpers.WiFiDirect
 
         public static void StopWatcher()
         {
-            _deviceWatcher.Added -= OnDeviceAdded;
-            _deviceWatcher.Removed -= OnDeviceRemoved;
-            _deviceWatcher.Updated -= OnDeviceUpdated;
-            _deviceWatcher.EnumerationCompleted -= OnEnumerationCompleted;
-            _deviceWatcher.Stopped -= OnStopped;
-            _deviceWatcher.Stop();
+            if (_deviceWatcher != null)
+            {
+                _deviceWatcher.Added -= OnDeviceAdded;
+                _deviceWatcher.Removed -= OnDeviceRemoved;
+                _deviceWatcher.Updated -= OnDeviceUpdated;
+                _deviceWatcher.EnumerationCompleted -= OnEnumerationCompleted;
+                _deviceWatcher.Stopped -= OnStopped;
+                _deviceWatcher.Stop();
+            }
             _deviceWatcher = null;
         }
 
