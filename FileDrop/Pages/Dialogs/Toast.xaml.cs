@@ -19,10 +19,10 @@ using Windows.Foundation.Collections;
 namespace FileDrop.Pages.Dialogs
 {
     
-    public sealed partial class Toast : Page
+    public sealed partial class ToastView : Page
     {
         public string Message;
-        public Toast()
+        public ToastView()
         {
             this.InitializeComponent();
         }

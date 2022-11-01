@@ -87,7 +87,7 @@ namespace FileDrop.Pages
             foreach (var item in transfers.Where(x => !x.Checked))
                 item.Checked = true;
 
-            Helpers.Dialog.Toast.Show("Test");
+            Helpers.Dialog.ToastDialog.Show("Test");
         }
         
         private void deselectAll_Click(object sender, RoutedEventArgs e)

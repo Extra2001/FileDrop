@@ -43,7 +43,6 @@ namespace FileDrop.Helpers
             SetCustomTitleBar(customTitleBar);
             TrySetSystemBackdrop();
             StartBLEServer();
-            WiFiDirectAdvertiser.StartAdvertisement();
         }
 
         #region 设置应用背景
@@ -171,6 +170,9 @@ namespace FileDrop.Helpers
             {
                 AppTitle.Foreground =
                     (SolidColorBrush)App.Current.Resources["WindowCaptionForeground"];
+
+                if (TempStorage.Advertising && (!WiFiDirectAdvertiser.Started))
+                    WiFiDirectAdvertiser.StartAdvertisement();
             }
         }
         private async void StartBLEServer()
@@ -184,6 +186,8 @@ namespace FileDrop.Helpers
             Repo.SaveAndClose();
             if (BLEServer.Started)
                 BLEServer.StopServer();
+            if (WiFiDirectAdvertiser.Started)
+                WiFiDirectAdvertiser.StopAdvertisement();
         }
 
         private class WindowsSystemDispatcherQueueHelper

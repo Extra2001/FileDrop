@@ -1,4 +1,5 @@
-﻿using System;
+﻿using FileDrop.Helpers.Dialog;
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -14,12 +15,9 @@ namespace FileDrop.Helpers.WiFiDirect
 {
     public class WiFiDirectAdvertiser
     {
-        private static ObservableCollection<ConnectedDevice> ConnectedDevices
-            = new ObservableCollection<ConnectedDevice>();
+        public static ConnectedDevice connectedDevice;
         private static WiFiDirectAdvertisementPublisher _publisher;
         private static WiFiDirectConnectionListener _listener;
-        private static ConcurrentDictionary<StreamSocketListener, WiFiDirectDevice> _pendingConnections
-            = new ConcurrentDictionary<StreamSocketListener, WiFiDirectDevice>();
 
         public static bool Started => _publisher != null && _publisher.Status == WiFiDirectAdvertisementPublisherStatus.Started;
 
@@ -27,9 +25,7 @@ namespace FileDrop.Helpers.WiFiDirect
         {
             _publisher = new WiFiDirectAdvertisementPublisher();
             _publisher.StatusChanged += OnStatusChanged;
-
             _listener = new WiFiDirectConnectionListener();
-
             try
             {
                 // This can raise an exception if the machine does not support WiFi. Sorry.
@@ -37,21 +33,18 @@ namespace FileDrop.Helpers.WiFiDirect
             }
             catch (Exception)
             {
-                // rootPage.NotifyUser($"Error preparing Advertisement: {ex}", NotifyType.ErrorMessage);
+                _ = ModelDialog.ShowDialog("未开启WiFi", "您将无法正常使用功能", "确定");
                 return;
             }
-
             _publisher.Advertisement.ListenStateDiscoverability
                 = WiFiDirectAdvertisementListenStateDiscoverability.Normal;
-
             foreach (var item in ConnectDefinition.GetInformationElements())
                 _publisher.Advertisement.InformationElements.Add(item);
-
             _publisher.Start();
 
             if (_publisher.Status != WiFiDirectAdvertisementPublisherStatus.Started)
             {
-
+                _ = ModelDialog.ShowDialog("开启广播失败", "您将无法正常使用功能", "确定");
             }
         }
 
@@ -65,26 +58,31 @@ namespace FileDrop.Helpers.WiFiDirect
         private static async Task<bool> HandleConnectionRequestAsync
             (WiFiDirectConnectionRequest connectionRequest)
         {
-            bool isPaired = (connectionRequest.DeviceInformation.Pairing?.IsPaired == true) ||
-                            (await IsAepPairedAsync(connectionRequest.DeviceInformation.Id));
+            //bool isPaired = (connectionRequest.DeviceInformation.Pairing?.IsPaired == true) ||
+            //                (await IsAepPairedAsync(connectionRequest.DeviceInformation.Id));
 
-            // Pair device if not already paired and not using legacy settings
-            if (!isPaired && !_publisher.Advertisement.LegacySettings.IsEnabled)
+            //// Pair device if not already paired and not using legacy settings
+            //if (!isPaired && !_publisher.Advertisement.LegacySettings.IsEnabled)
+            //{
+            //    if (!await ConnectHelper.RequestPairDeviceAsync(connectionRequest.DeviceInformation.Pairing))
+            //    {
+            //        return false;
+            //    }
+            //}
+
+            if(connectedDevice!=null)
             {
-                if (!await ConnectHelper.RequestPairDeviceAsync(connectionRequest.DeviceInformation.Pairing))
+                try
                 {
-                    return false;
+                    connectedDevice.Dispose();
                 }
+                catch { }
+                connectedDevice = null;
             }
-            return true;
-        }
 
-        public static async Task<bool> ConnectDevice(WiFiDirectConnectionRequest connectionRequest)
-        {
             WiFiDirectDevice wfdDevice = null;
             try
             {
-                // IMPORTANT: FromIdAsync needs to be called from the UI thread
                 wfdDevice = await WiFiDirectDevice.FromIdAsync(connectionRequest.DeviceInformation.Id);
             }
             catch (Exception ex)
@@ -95,51 +93,20 @@ namespace FileDrop.Helpers.WiFiDirect
             // Register for the ConnectionStatusChanged event handler
             wfdDevice.ConnectionStatusChanged += OnConnectionStatusChanged;
 
-            var listenerSocket = new StreamSocketListener();
-
-            // Save this (listenerSocket, wfdDevice) pair so we can hook it up when the socket connection is made.
-            _pendingConnections[listenerSocket] = wfdDevice;
-
-            var EndpointPairs = wfdDevice.GetConnectionEndpointPairs();
-
-            listenerSocket.ConnectionReceived += OnSocketConnectionReceived;
             try
             {
-                await listenerSocket.BindEndpointAsync(EndpointPairs[0].LocalHostName, ConnectDefinition.strServerPort);
+                connectedDevice = new ConnectedDevice(wfdDevice);
+                await Task.Delay(1000);
+                var RW = await connectedDevice.EstablishSocket();
+                RW.StartRead(SocketRead.RecieveRead);
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 return false;
             }
+
             return true;
         }
-
-        private static async void OnSocketConnectionReceived(StreamSocketListener sender, StreamSocketListenerConnectionReceivedEventArgs args)
-        {
-            StreamSocket serverSocket = args.Socket;
-
-            // Look up the WiFiDirectDevice associated with this StreamSocketListener.
-            WiFiDirectDevice wfdDevice;
-            if (!_pendingConnections.TryRemove(sender, out wfdDevice))
-            {
-                serverSocket.Dispose();
-                return;
-            }
-
-            SocketReaderWriter socketRW = new SocketReaderWriter(serverSocket);
-
-            // The first message sent is the name of the connection.
-            string message = await socketRW.ReadMessageAsync();
-
-            // Add this connection to the list of active connections.
-            ConnectedDevices.Add(new ConnectedDevice(message ?? "(unnamed)", wfdDevice, socketRW));
-
-            while (message != null)
-            {
-                message = await socketRW.ReadMessageAsync();
-            }
-        }
-
 
         private static async Task<bool> IsAepPairedAsync(string deviceId)
         {
@@ -169,6 +136,7 @@ namespace FileDrop.Helpers.WiFiDirect
         private static async void OnConnectionRequested(WiFiDirectConnectionListener sender, WiFiDirectConnectionRequestedEventArgs connectionEventArgs)
         {
             WiFiDirectConnectionRequest connectionRequest = connectionEventArgs.GetConnectionRequest();
+            
             bool success = await HandleConnectionRequestAsync(connectionRequest);
 
             if (!success)
@@ -188,8 +156,8 @@ namespace FileDrop.Helpers.WiFiDirect
         {
             if (sender.ConnectionStatus == WiFiDirectConnectionStatus.Disconnected)
             {
-                // TODO: Should we remove this connection from the list?
-                // (Yes, probably.)
+                connectedDevice.Dispose();
+                connectedDevice = null;
             }
         }
     }

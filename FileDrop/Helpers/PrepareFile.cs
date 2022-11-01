@@ -27,7 +27,8 @@ namespace FileDrop.Helpers
             var transferInfo = new TransferInfo
             {
                 TransferInfos = transferItems,
-                FileInfos = transferFiles
+                FileInfos = transferFiles,
+                deviceName = SettingsItem.GetSettings().LocalName
             };
             return transferInfo;
         }

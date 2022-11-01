@@ -1,5 +1,6 @@
 ﻿using FileDrop.Helpers;
 using FileDrop.Helpers.BLE;
+using FileDrop.Helpers.Dialog;
 using FileDrop.Helpers.WiFiDirect;
 using FileDrop.Models;
 using Microsoft.UI.Xaml;
@@ -9,9 +10,12 @@ using Microsoft.UI.Xaml.Data;
 using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Navigation;
+using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Collections.Specialized;
+using System.ComponentModel;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices.WindowsRuntime;
@@ -32,7 +36,6 @@ namespace FileDrop.Pages
         {
             this.InitializeComponent();
         }
-
         protected override void OnNavigatedTo(NavigationEventArgs e)
         {
             base.OnNavigatedTo(e);
@@ -50,54 +53,81 @@ namespace FileDrop.Pages
         private void InitWiFiDirect()
         {
             WiFiDirectConnector.deviceContents.CollectionChanged += DeviceContents_CollectionChanged;
-            WiFiDirectConnector.StartWatcher();
+            WiFiDirectConnector.ScanStart += WiFiDirectConnector_ScanStart;
             WiFiDirectConnector.ScanComplete += WiFiDirectConnector_ScanComplete;
-        }
-
-        private void WiFiDirectConnector_ScanComplete()
-        {
+            WiFiDirectConnector.StartWatcher();
             
         }
-
         private void InitBLE()
         {
             BLEClient.deviceContents.CollectionChanged += DeviceContents_CollectionChanged;
             BLEClient.StartBleDeviceWatcher();
             BLEClient.ScanComplete += BLEClient_ScanComplete;
         }
-        private void DeviceContents_CollectionChanged(object sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
+        private void WiFiDirectConnector_ScanStart()
         {
-            if (e.Action == System.Collections.Specialized.NotifyCollectionChangedAction.Add)
+            App.mainWindow.DispatcherQueue.TryEnqueue(() =>
             {
-                var item = e.NewItems[0] as DeviceContent;
-                item.PropertyChanged += DeviceContent_PropertyChanged;
-                deviceContents.Add(item.ToAppInfoView());
-            }
-            else if (e.Action == System.Collections.Specialized.NotifyCollectionChangedAction.Reset)
-            {
-                deviceContents.Clear();
-            }
-            else if (e.Action == System.Collections.Specialized.NotifyCollectionChangedAction.Remove)
-            {
-                var item = e.OldItems[0] as DeviceContent;
-                item.PropertyChanged -= DeviceContent_PropertyChanged;
-                var find = deviceContents.Where(x => x.Id == item.Id).FirstOrDefault();
-                if (find != null)
-                    deviceContents.Remove(find);
-            }
-        }
-        private void DeviceContent_PropertyChanged(object sender, System.ComponentModel.PropertyChangedEventArgs e)
-        {
-            var dc = sender as DeviceContent;
-            var find = deviceContents.Where(x => x.Id == dc.Id).FirstOrDefault();
-            if (find != null)
-                find.DeviceName = dc.deviceName;
+                scaningDevice.Visibility = Visibility.Visible;
+                scaningDevice.IsActive = true;
+                refreshButton.IsEnabled = false;
+            });
         }
         private void BLEClient_ScanComplete()
         {
             
         }
-
+        private void WiFiDirectConnector_ScanComplete()
+        {
+            WiFiDirectConnector.StopWatcher();
+            App.mainWindow.DispatcherQueue.TryEnqueue(() =>
+            {
+                scaningDevice.Visibility = Visibility.Collapsed;
+                scaningDevice.IsActive = false;
+                refreshButton.IsEnabled = true;
+            });
+        }
+        private void DeviceContents_CollectionChanged(object sender, NotifyCollectionChangedEventArgs e)
+        {
+            App.mainWindow.DispatcherQueue.TryEnqueue(() =>
+            {
+                if (e.Action == NotifyCollectionChangedAction.Add)
+                {
+                    var item = e.NewItems[0] as DeviceContent;
+                    item.PropertyChanged += DeviceContent_PropertyChanged;
+                    deviceContents.Add(item.ToAppInfoView());
+                }
+                else if (e.Action == NotifyCollectionChangedAction.Reset)
+                {
+                    deviceContents.Clear();
+                }
+                else if (e.Action == NotifyCollectionChangedAction.Remove)
+                {
+                    var item = e.OldItems[0] as DeviceContent;
+                    item.PropertyChanged -= DeviceContent_PropertyChanged;
+                    var find = deviceContents.Where(x => x.Id == item.Id).FirstOrDefault();
+                    if (find != null)
+                        deviceContents.Remove(find);
+                }
+                SetSendButtonEnabled();
+            });
+        }
+        private void DeviceContent_PropertyChanged(object sender, PropertyChangedEventArgs e)
+        {
+            App.mainWindow.DispatcherQueue.TryEnqueue(() =>
+            {
+                var dc = sender as DeviceContent;
+                var find = deviceContents.Where(x => x.Id == dc.Id).FirstOrDefault();
+                if (find != null)
+                    find.DeviceName = dc.deviceName;
+                SetSendButtonEnabled();
+            });
+        }
+        private void refreshButton_Click(object sender, RoutedEventArgs e)
+        {
+            WiFiDirectConnector.StartWatcher();
+        }
+        #region SelectFiles
         private async void addFileButton_Click(object sender, RoutedEventArgs e)
         {
             var picker = new Windows.Storage.Pickers.FileOpenPicker();
@@ -122,7 +152,6 @@ namespace FileDrop.Pages
             SetBorder();
             SaveToSendFile();
         }
-
         private void SetBorder()
         {
             foreach (var item in toSendFiles)
@@ -130,7 +159,6 @@ namespace FileDrop.Pages
             var last = toSendFiles.LastOrDefault();
             if (last != null) last.BorderVisibility = Visibility.Collapsed;
         }
-
         private async void addDirButton_Click(object sender, RoutedEventArgs e)
         {
             var picker = new Windows.Storage.Pickers.FolderPicker();
@@ -155,7 +183,6 @@ namespace FileDrop.Pages
             SetBorder();
             SaveToSendFile();
         }
-
         private void SaveToSendFile()
         {
             TempStorage.ToSendFiles = toSendFiles.ToList();
@@ -166,10 +193,41 @@ namespace FileDrop.Pages
             foreach (var item in TempStorage.ToSendFiles)
                 toSendFiles.Add(item);
         }
-
+        #endregion
         private async void sendButton_Click(object sender, RoutedEventArgs e)
         {
             var info = await PrepareFile.Prepare(toSendFiles);
+            var apv = deviceContents.Where(x => x.Checked).FirstOrDefault();
+            if (apv == null)
+            {
+                _ = ModelDialog.ShowDialog("提示", "未选择设备");
+                return;
+            }
+            var dc = WiFiDirectConnector.deviceContents.Where(x => x.Id == apv.Id).FirstOrDefault();
+
+            if (await WiFiDirectConnector.ConnectDevice(dc.deviceInfo))
+            {
+                var RW = await WiFiDirectConnector.connectedDevice.EstablishSocket();
+                await RW.WriteAsync(info);
+                RW.StartRead(SocketRead.SendRead);
+            }
+        }
+        
+        private void ToggleButton_Checked(object sender, RoutedEventArgs e)
+        {
+            foreach (var item in deviceContents)
+                if (item.Id != (int)(sender as ToggleButton).Tag)
+                    item.Checked = false;
+            SetSendButtonEnabled();
+        }
+        private void ToggleButton_Unchecked(object sender, RoutedEventArgs e)
+        {
+            SetSendButtonEnabled();
+        }
+        private async void SetSendButtonEnabled()
+        {
+            await Task.Delay(50);
+            sendButton.IsEnabled = deviceContents.Where(x => x.Checked).Any();
         }
     }
 }

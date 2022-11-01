@@ -1,32 +1,68 @@
-﻿using System;
+﻿using FileDrop.Helpers.Dialog;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Windows.Devices.WiFiDirect;
+using Windows.Networking;
+using Windows.Networking.Sockets;
 
 namespace FileDrop.Helpers.WiFiDirect
 {
     public class ConnectedDevice : IDisposable
     {
-        public SocketReaderWriter SocketRW { get; }
         public WiFiDirectDevice WfdDevice { get; }
-        public string DisplayName { get; }
+        public StreamSocketListener socketListener { get; }
 
-        public ConnectedDevice(string displayName, WiFiDirectDevice wfdDevice, SocketReaderWriter socketRW)
+        private HostName remoteHostName { get; }
+        private SocketReaderWriter SocketRW { get; set; }
+
+        public ConnectedDevice(WiFiDirectDevice wfdDevice)
         {
-            DisplayName = displayName;
             WfdDevice = wfdDevice;
-            SocketRW = socketRW;
+            IReadOnlyList<EndpointPair> endpointPairs = wfdDevice.GetConnectionEndpointPairs();
+            remoteHostName = endpointPairs[0].RemoteHostName;
+            socketListener = new StreamSocketListener();
+            socketListener.ConnectionReceived += SocketListener_ConnectionReceived;
+            _ = socketListener.BindEndpointAsync(remoteHostName, ConnectDefinition.strServerPort);
         }
 
-        public override string ToString() => DisplayName;
+        private void SocketListener_ConnectionReceived(StreamSocketListener sender, StreamSocketListenerConnectionReceivedEventArgs args)
+        {
+            SocketRW = new SocketReaderWriter(args.Socket);
+        }
+
+        public async Task<SocketReaderWriter> EstablishSocket()
+        {
+            if (SocketRW != null)
+                return SocketRW;
+
+            StreamSocket clientSocket = new StreamSocket();
+            try
+            {
+                await clientSocket.ConnectAsync(remoteHostName, ConnectDefinition.strServerPort);
+            }
+            catch (Exception ex)
+            {
+                _ = ModelDialog.ShowDialog("提示", "出现错误：" + ex.Message);
+            }
+            SocketRW = new SocketReaderWriter(clientSocket);
+            return SocketRW;
+        }
+        public void CloseSocket()
+        {
+            if (SocketRW == null)
+                return;
+            try { SocketRW.Dispose(); }
+            catch { }
+            SocketRW = null;
+        }
 
         public void Dispose()
         {
-            // Close socket
-            SocketRW.Dispose();
-            // Close WiFiDirectDevice object
+            SocketRW?.Dispose();
+            socketListener.Dispose();
             WfdDevice.Dispose();
         }
     }

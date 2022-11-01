@@ -18,6 +18,8 @@ using Windows.UI.Core;
 using Windows.UI.Popups;
 using System.IO;
 using System.Runtime.InteropServices.WindowsRuntime;
+using Windows.Networking;
+using FileDrop.Helpers.Dialog;
 
 namespace FileDrop.Helpers.WiFiDirect
 {
@@ -27,14 +29,15 @@ namespace FileDrop.Helpers.WiFiDirect
 
         public static ObservableCollection<DiscoveredDevice> DiscoveredDevices { get; }
             = new ObservableCollection<DiscoveredDevice>();
-        public static ObservableCollection<ConnectedDevice> ConnectedDevices { get; }
-            = new ObservableCollection<ConnectedDevice>();
+        public static ConnectedDevice connectedDevice;
         public static ObservableCollection<DeviceContent> deviceContents { get; }
             = new ObservableCollection<DeviceContent>();
 
         #region Events
         public delegate void _EnumerateComplete();
         public static event _EnumerateComplete ScanComplete;
+        public delegate void _EnumerateStarted();
+        public static event _EnumerateStarted ScanStart;
         #endregion
 
         public static void StartWatcher()
@@ -44,6 +47,7 @@ namespace FileDrop.Helpers.WiFiDirect
             if (!WiFiDirectAdvertiser.Started)
                 return;
             DiscoveredDevices.Clear();
+            deviceContents.Clear();
 
             string deviceSelector = WiFiDirectDevice.GetDeviceSelector(WiFiDirectDeviceSelectorType.AssociationEndpoint);
 
@@ -56,6 +60,7 @@ namespace FileDrop.Helpers.WiFiDirect
             _deviceWatcher.Stopped += OnStopped;
 
             _deviceWatcher.Start();
+            ScanStart?.Invoke();
         }
 
         public static void StopWatcher()
@@ -108,7 +113,51 @@ namespace FileDrop.Helpers.WiFiDirect
             ScanComplete?.Invoke();
         }
         #endregion
+        public static async Task<bool> ConnectDevice(DeviceInformation deviceInfo)
+        {
+            if (connectedDevice != null)
+            {
+                try { connectedDevice.Dispose(); } catch { }
+            }
+            //if (!deviceInfo.Pairing.IsPaired)
+            //{
+            //    if (!await ConnectHelper.RequestPairDeviceAsync(deviceInfo.Pairing))
+            //    {
+            //        return false;
+            //    }
+            //}
 
+            WiFiDirectDevice wfdDevice = null;
+            try
+            {
+                // IMPORTANT: FromIdAsync needs to be called from the UI thread
+                wfdDevice = await WiFiDirectDevice.FromIdAsync(deviceInfo.Id);
+            }
+            catch (TaskCanceledException)
+            {
+                _ = ModelDialog.ShowDialog("提示", "发送已被取消");
+                return false;
+            }
+
+            // Register for the ConnectionStatusChanged event handler
+            wfdDevice.ConnectionStatusChanged += OnConnectionStatusChanged;
+
+            IReadOnlyList<EndpointPair> endpointPairs = wfdDevice.GetConnectionEndpointPairs();
+            HostName remoteHostName = endpointPairs[0].RemoteHostName;
+
+            connectedDevice = new ConnectedDevice(wfdDevice);
+            return true;
+        }
+
+        private static void Listener_ConnectionReceived(StreamSocketListener sender, StreamSocketListenerConnectionReceivedEventArgs args)
+        {
+            
+        }
+
+        private static void OnConnectionStatusChanged(WiFiDirectDevice sender, object arg)
+        {
+
+        }
         private static bool IsSupported(DeviceInformation deviceInfo)
         {
             IList<WiFiDirectInformationElement> informationElements = null;
