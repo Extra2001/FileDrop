@@ -103,17 +103,17 @@ namespace FileDrop.Helpers.WiFiDirect
         private static async Task<bool> HandleConnectionRequestAsync
            (WiFiDirectConnectionRequest connectionRequest)
         {
-            //bool isPaired = (connectionRequest.DeviceInformation.Pairing?.IsPaired == true) ||
-            //                (await IsAepPairedAsync(connectionRequest.DeviceInformation.Id));
+            bool isPaired = (connectionRequest.DeviceInformation.Pairing?.IsPaired == true) ||
+                            (await IsAepPairedAsync(connectionRequest.DeviceInformation.Id));
 
-            //// Pair device if not already paired and not using legacy settings
-            //if (!isPaired && !_publisher.Advertisement.LegacySettings.IsEnabled)
-            //{
-            //    if (!await ConnectHelper.RequestPairDeviceAsync(connectionRequest.DeviceInformation.Pairing))
-            //    {
-            //        return false;
-            //    }
-            //}
+            // Pair device if not already paired and not using legacy settings
+            if (!isPaired && !_publisher.Advertisement.LegacySettings.IsEnabled)
+            {
+                if (!await ConnectHelper.RequestPairDeviceAsync(connectionRequest.DeviceInformation.Pairing))
+                {
+                    return false;
+                }
+            }
 
             if (connectedDevice != null)
             {

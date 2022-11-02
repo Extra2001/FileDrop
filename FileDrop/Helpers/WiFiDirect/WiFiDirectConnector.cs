@@ -130,13 +130,14 @@ namespace FileDrop.Helpers.WiFiDirect
                 {
                     try { connectedDevice.Dispose(); } catch { }
                 }
-                //if (!deviceInfo.Pairing.IsPaired)
-                //{
-                //    if (!await ConnectHelper.RequestPairDeviceAsync(deviceInfo.Pairing))
-                //    {
-                //        return false;
-                //    }
-                //}
+                if (!deviceInfo.Pairing.IsPaired)
+                {
+                    if (!await ConnectHelper.RequestPairDeviceAsync(deviceInfo.Pairing))
+                    {
+                        callback.Invoke(false);
+                        return;
+                    }
+                }
 
                 WiFiDirectDevice wfdDevice = null;
                 try
