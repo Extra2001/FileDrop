@@ -28,9 +28,7 @@ namespace FileDrop.Pages
     public sealed partial class TransferPage : Page
     {
         public ObservableCollection<ToSendFile> toSendFiles = new ObservableCollection<ToSendFile>();
-
-        public ObservableCollection<AppInfoView> deviceContents
-            = new ObservableCollection<AppInfoView>();
+        public ObservableCollection<AppInfoView> deviceContents = new ObservableCollection<AppInfoView>();
 
         public TransferPage()
         {
@@ -45,24 +43,23 @@ namespace FileDrop.Pages
         protected override void OnNavigatedFrom(NavigationEventArgs e)
         {
             base.OnNavigatedFrom(e);
-            //BLEClient.ScanComplete -= BLEClient_ScanComplete;
-            //BLEClient.StopBleDeviceWatcher();
-            WiFiDirectConnector.ScanComplete -= WiFiDirectConnector_ScanComplete;
-            WiFiDirectConnector.StopWatcher();
+            CloseWiFiDirect();
         }
+
+        #region WiFiDirectConfigure
         private void InitWiFiDirect()
         {
             WiFiDirectConnector.deviceContents.CollectionChanged += DeviceContents_CollectionChanged;
             WiFiDirectConnector.ScanStart += WiFiDirectConnector_ScanStart;
             WiFiDirectConnector.ScanComplete += WiFiDirectConnector_ScanComplete;
             WiFiDirectConnector.StartWatcher();
-            
         }
-        private void InitBLE()
+        private void CloseWiFiDirect()
         {
-            BLEClient.deviceContents.CollectionChanged += DeviceContents_CollectionChanged;
-            BLEClient.StartBleDeviceWatcher();
-            BLEClient.ScanComplete += BLEClient_ScanComplete;
+            WiFiDirectConnector.deviceContents.CollectionChanged -= DeviceContents_CollectionChanged;
+            WiFiDirectConnector.ScanStart -= WiFiDirectConnector_ScanStart;
+            WiFiDirectConnector.ScanComplete -= WiFiDirectConnector_ScanComplete;
+            WiFiDirectConnector.StopWatcher();
         }
         private void WiFiDirectConnector_ScanStart()
         {
@@ -72,10 +69,6 @@ namespace FileDrop.Pages
                 scaningDevice.IsActive = true;
                 refreshButton.IsEnabled = false;
             });
-        }
-        private void BLEClient_ScanComplete()
-        {
-            
         }
         private void WiFiDirectConnector_ScanComplete()
         {
@@ -123,10 +116,8 @@ namespace FileDrop.Pages
                 SetSendButtonEnabled();
             });
         }
-        private void refreshButton_Click(object sender, RoutedEventArgs e)
-        {
-            WiFiDirectConnector.StartWatcher();
-        }
+        #endregion
+
         #region SelectFiles
         private async void addFileButton_Click(object sender, RoutedEventArgs e)
         {
@@ -194,25 +185,8 @@ namespace FileDrop.Pages
                 toSendFiles.Add(item);
         }
         #endregion
-        private async void sendButton_Click(object sender, RoutedEventArgs e)
-        {
-            var info = await PrepareFile.Prepare(toSendFiles);
-            var apv = deviceContents.Where(x => x.Checked).FirstOrDefault();
-            if (apv == null)
-            {
-                _ = ModelDialog.ShowDialog("提示", "未选择设备");
-                return;
-            }
-            var dc = WiFiDirectConnector.deviceContents.Where(x => x.Id == apv.Id).FirstOrDefault();
 
-            if (await WiFiDirectConnector.ConnectDevice(dc.deviceInfo))
-            {
-                var RW = await WiFiDirectConnector.connectedDevice.EstablishSocket();
-                await RW.WriteAsync(info);
-                RW.StartRead(SocketRead.SendRead);
-            }
-        }
-        
+        #region SelectDevice
         private void ToggleButton_Checked(object sender, RoutedEventArgs e)
         {
             foreach (var item in deviceContents)
@@ -228,6 +202,31 @@ namespace FileDrop.Pages
         {
             await Task.Delay(50);
             sendButton.IsEnabled = deviceContents.Where(x => x.Checked).Any();
+        }
+        private void refreshButton_Click(object sender, RoutedEventArgs e)
+        {
+            WiFiDirectConnector.StartWatcher();
+        }
+        #endregion
+
+        private async void sendButton_Click(object sender, RoutedEventArgs e)
+        {
+            var info = await PrepareFile.Prepare(toSendFiles);
+            var apv = deviceContents.Where(x => x.Checked).FirstOrDefault();
+            if (apv == null)
+            {
+                _ = ModelDialog.ShowDialog("提示", "未选择设备");
+                return;
+            }
+            var dc = WiFiDirectConnector.deviceContents.Where(x => x.Id == apv.Id).FirstOrDefault();
+
+            if (await WiFiDirectConnector.ConnectDevice(dc.deviceInfo))
+            {
+                var RW = await WiFiDirectConnector.connectedDevice.EstablishSocket();
+                await RW.WriteAsync(info);
+                ModelDialog.ShowWaiting("请稍后", "正在等待对方回应...");
+                RW.StartRead(SocketRead.SendRead);
+            }
         }
     }
 }

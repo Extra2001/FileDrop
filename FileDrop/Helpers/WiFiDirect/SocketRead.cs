@@ -32,7 +32,7 @@ namespace FileDrop.Helpers.WiFiDirect
             catch { }
         }
 
-        public static async void SendRead(SocketReaderWriter.SocketRead read)
+        public static void SendRead(SocketReaderWriter.SocketRead read)
         {
             TransferStartRespond res = null;
             try { res = JsonConvert.DeserializeObject<TransferStartRespond>(read.info); }
@@ -47,7 +47,7 @@ namespace FileDrop.Helpers.WiFiDirect
         }
         public static void StartTransfer()
         {
-
+            ModelDialog.ShowWaiting("请稍后", "正在开始传输...");
         }
     }
 }

@@ -14,9 +14,11 @@ namespace FileDrop.Helpers.WiFiDirect
     {
         public WiFiDirectDevice WfdDevice { get; }
         public StreamSocketListener socketListener { get; }
-
         private HostName remoteHostName { get; }
         private SocketReaderWriter SocketRW { get; set; }
+
+        public delegate void _RecievedSocketConnection(ConnectedDevice device, SocketReaderWriter socket);
+        public event _RecievedSocketConnection RecievedSocketConnection;
 
         public ConnectedDevice(WiFiDirectDevice wfdDevice)
         {
@@ -31,13 +33,14 @@ namespace FileDrop.Helpers.WiFiDirect
         private void SocketListener_ConnectionReceived(StreamSocketListener sender, StreamSocketListenerConnectionReceivedEventArgs args)
         {
             SocketRW = new SocketReaderWriter(args.Socket);
+            RecievedSocketConnection?.Invoke(this, SocketRW);
         }
 
         public async Task<SocketReaderWriter> EstablishSocket()
         {
             if (SocketRW != null)
                 return SocketRW;
-
+            ModelDialog.ShowWaiting("请稍后", "正在建立连接...");
             StreamSocket clientSocket = new StreamSocket();
             try
             {

@@ -28,13 +28,11 @@ namespace FileDrop.Helpers
         private DesktopAcrylicController m_AbackdropController;
         private SystemBackdropConfiguration m_configurationSource;
         private TextBlock AppTitle;
-
         public MainWindowConfigurator(MainWindow mainWindow, TextBlock AppTitle)
         {
             this.mainWindow = mainWindow;
             this.AppTitle = AppTitle;
         }
-
         public void Configure(Border customTitleBar)
         {
             mainWindow.Closed += MainWindow_Closed;
@@ -42,7 +40,6 @@ namespace FileDrop.Helpers
             App.mainWindow = mainWindow;
             SetCustomTitleBar(customTitleBar);
             TrySetSystemBackdrop();
-            StartBLEServer();
         }
 
         #region 设置应用背景
@@ -175,19 +172,12 @@ namespace FileDrop.Helpers
                     WiFiDirectAdvertiser.StartAdvertisement();
             }
         }
-        private async void StartBLEServer()
-        {
-            bool res = await BLECheck.CheckComeptivity();
-            if (await BLEServer.InitServiceAsync())
-                BLEServer.StartServer();
-        }
         private void MainWindow_Closed(object sender, WindowEventArgs args)
         {
             Repo.SaveAndClose();
-            if (BLEServer.Started)
-                BLEServer.StopServer();
             if (WiFiDirectAdvertiser.Started)
                 WiFiDirectAdvertiser.StopAdvertisement();
+            WiFiDirectConnector.StopWatcher();
         }
 
         private class WindowsSystemDispatcherQueueHelper

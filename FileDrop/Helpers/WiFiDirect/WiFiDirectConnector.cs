@@ -67,12 +67,16 @@ namespace FileDrop.Helpers.WiFiDirect
         {
             if (_deviceWatcher != null)
             {
-                _deviceWatcher.Added -= OnDeviceAdded;
-                _deviceWatcher.Removed -= OnDeviceRemoved;
-                _deviceWatcher.Updated -= OnDeviceUpdated;
-                _deviceWatcher.EnumerationCompleted -= OnEnumerationCompleted;
-                _deviceWatcher.Stopped -= OnStopped;
-                _deviceWatcher.Stop();
+                try
+                {
+                    _deviceWatcher.Added -= OnDeviceAdded;
+                    _deviceWatcher.Removed -= OnDeviceRemoved;
+                    _deviceWatcher.Updated -= OnDeviceUpdated;
+                    _deviceWatcher.EnumerationCompleted -= OnEnumerationCompleted;
+                    _deviceWatcher.Stopped -= OnStopped;
+                    _deviceWatcher.Stop();
+                }
+                catch { }
             }
             _deviceWatcher = null;
         }
@@ -118,6 +122,8 @@ namespace FileDrop.Helpers.WiFiDirect
         #endregion
         public static async Task<bool> ConnectDevice(DeviceInformation deviceInfo)
         {
+            ModelDialog.ShowWaiting("请稍后", "正在连接设备...");
+
             if (connectedDevice != null)
             {
                 try { connectedDevice.Dispose(); } catch { }
@@ -141,6 +147,11 @@ namespace FileDrop.Helpers.WiFiDirect
                 _ = ModelDialog.ShowDialog("提示", "发送已被取消");
                 return false;
             }
+            catch (Exception ex)
+            {
+                _ = ModelDialog.ShowDialog("提示", "发送异常" + ex.Message);
+                return false;
+            }
 
             // Register for the ConnectionStatusChanged event handler
             wfdDevice.ConnectionStatusChanged += OnConnectionStatusChanged;
@@ -150,11 +161,6 @@ namespace FileDrop.Helpers.WiFiDirect
 
             connectedDevice = new ConnectedDevice(wfdDevice);
             return true;
-        }
-
-        private static void Listener_ConnectionReceived(StreamSocketListener sender, StreamSocketListenerConnectionReceivedEventArgs args)
-        {
-            
         }
 
         private static void OnConnectionStatusChanged(WiFiDirectDevice sender, object arg)

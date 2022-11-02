@@ -1,11 +1,7 @@
 ﻿using FileDrop.Models;
-using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 using Windows.Devices.WiFiDirect;
 using Windows.Security.Cryptography;
-using Windows.Storage.Streams;
 
 namespace FileDrop.Helpers.WiFiDirect
 {

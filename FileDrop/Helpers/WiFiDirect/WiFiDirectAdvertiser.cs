@@ -23,25 +23,27 @@ namespace FileDrop.Helpers.WiFiDirect
 
         public static void StartAdvertisement()
         {
-            _publisher = new WiFiDirectAdvertisementPublisher();
-            _publisher.StatusChanged += OnStatusChanged;
-            _listener = new WiFiDirectConnectionListener();
-            try
+            if (!Started)
             {
-                // This can raise an exception if the machine does not support WiFi. Sorry.
-                _listener.ConnectionRequested += OnConnectionRequested;
+                _publisher = new WiFiDirectAdvertisementPublisher();
+                _publisher.StatusChanged += OnStatusChanged;
+                _listener = new WiFiDirectConnectionListener();
+                try
+                {
+                    // This can raise an exception if the machine does not support WiFi. Sorry.
+                    _listener.ConnectionRequested += OnConnectionRequested;
+                }
+                catch (Exception)
+                {
+                    _ = ModelDialog.ShowDialog("未开启WiFi", "您将无法正常使用功能", "确定");
+                    return;
+                }
+                _publisher.Advertisement.ListenStateDiscoverability
+                    = WiFiDirectAdvertisementListenStateDiscoverability.Normal;
+                foreach (var item in ConnectDefinition.GetInformationElements())
+                    _publisher.Advertisement.InformationElements.Add(item);
             }
-            catch (Exception)
-            {
-                _ = ModelDialog.ShowDialog("未开启WiFi", "您将无法正常使用功能", "确定");
-                return;
-            }
-            _publisher.Advertisement.ListenStateDiscoverability
-                = WiFiDirectAdvertisementListenStateDiscoverability.Normal;
-            foreach (var item in ConnectDefinition.GetInformationElements())
-                _publisher.Advertisement.InformationElements.Add(item);
             _publisher.Start();
-
             if (_publisher.Status != WiFiDirectAdvertisementPublisherStatus.Started)
             {
                 _ = ModelDialog.ShowDialog("开启广播失败", "您将无法正常使用功能", "确定");
@@ -50,8 +52,11 @@ namespace FileDrop.Helpers.WiFiDirect
 
         public static void StopAdvertisement()
         {
-            _publisher.Stop();
-            _publisher.StatusChanged -= OnStatusChanged;
+            if (Started)
+            {
+                _publisher.Stop();
+                _publisher.StatusChanged -= OnStatusChanged;
+            }
             _listener.ConnectionRequested -= OnConnectionRequested;
             connectedDevice?.Dispose();
             connectedDevice = null;
@@ -89,25 +94,22 @@ namespace FileDrop.Helpers.WiFiDirect
             }
             catch (Exception ex)
             {
+                _ = ModelDialog.ShowDialog("错误", $"连接失败{ex.Message}");
                 return false;
             }
 
             // Register for the ConnectionStatusChanged event handler
             wfdDevice.ConnectionStatusChanged += OnConnectionStatusChanged;
-
-            try
-            {
-                connectedDevice = new ConnectedDevice(wfdDevice);
-                await Task.Delay(1000);
-                var RW = await connectedDevice.EstablishSocket();
-                RW.StartRead(SocketRead.RecieveRead);
-            }
-            catch (Exception)
-            {
-                return false;
-            }
+            connectedDevice = new ConnectedDevice(wfdDevice);
+            connectedDevice.RecievedSocketConnection += ConnectedDevice_RecievedSocketConnection;
 
             return true;
+        }
+
+        private static void ConnectedDevice_RecievedSocketConnection(ConnectedDevice device, SocketReaderWriter socket)
+        {
+            _ = ModelDialog.ShowWaiting("请稍后", $"已建立连接，等待对方发送传输请求...");
+            socket.StartRead(SocketRead.RecieveRead);
         }
 
         private static async Task<bool> IsAepPairedAsync(string deviceId)
@@ -137,8 +139,9 @@ namespace FileDrop.Helpers.WiFiDirect
 
         private static async void OnConnectionRequested(WiFiDirectConnectionListener sender, WiFiDirectConnectionRequestedEventArgs connectionEventArgs)
         {
+            ModelDialog.ShowWaiting("请稍后", $"设备正在请求连接...");
             WiFiDirectConnectionRequest connectionRequest = connectionEventArgs.GetConnectionRequest();
-            
+            ModelDialog.ShowWaiting("请稍后", $"设备\"{connectionRequest.DeviceInformation.Name}\"正在请求连接...");
             bool success = await HandleConnectionRequestAsync(connectionRequest);
 
             if (!success)

@@ -1,4 +1,5 @@
-﻿using Newtonsoft.Json;
+﻿using FileDrop.Helpers.Dialog;
+using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -42,6 +43,7 @@ namespace FileDrop.Helpers.WiFiDirect
 
         public async Task WriteAsync(object obj, IBuffer payload = null)
         {
+            ModelDialog.ShowWaiting("请稍后", "正在请求发送...");
             try
             {
                 var info = JsonConvert.SerializeObject(obj);
@@ -124,6 +126,7 @@ namespace FileDrop.Helpers.WiFiDirect
                 while (true)
                 {
                     read = await ReadAsync();
+                    if (read == null) continue;
                     action(read);
                 }
             }

@@ -10,9 +10,14 @@ namespace FileDrop.Helpers.Dialog
 {
     public class ModelDialog
     {
+        public static ShowedDialog showedDialogs = null;
+
         public static async Task<ContentDialogResult> ShowDialog
             (string title, string content, string primaryButton = "确定", string closeButton = null)
         {
+            if (showedDialogs != null)
+                showedDialogs.Hide();
+
             ContentDialog dialog = new ContentDialog();
 
             dialog.XamlRoot = App.mainWindow.Content.XamlRoot;
@@ -22,6 +27,24 @@ namespace FileDrop.Helpers.Dialog
             dialog.DefaultButton = ContentDialogButton.Primary;
             dialog.Content = content;
             return await dialog.ShowAsync();
+        }
+
+        public static ShowedDialog ShowWaiting(string title, string content)
+        {
+            if (showedDialogs != null)
+                showedDialogs.Hide();
+
+            ContentDialog dialog = new ContentDialog();
+
+            dialog.XamlRoot = App.mainWindow.Content.XamlRoot;
+            dialog.Title = title;
+            dialog.DefaultButton = ContentDialogButton.Primary;
+            dialog.Content = content;
+            _ = dialog.ShowAsync();
+            return new ShowedDialog()
+            {
+                dialog = dialog
+            };
         }
     }
 }

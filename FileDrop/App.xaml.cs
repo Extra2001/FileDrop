@@ -1,5 +1,6 @@
 ﻿using FileDrop.Helpers;
-using Microsoft.UI.Dispatching;
+using FileDrop.Helpers.Dialog;
+using FileDrop.Helpers.WiFiDirect;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Controls.Primitives;
@@ -8,7 +9,6 @@ using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Navigation;
 using Microsoft.UI.Xaml.Shapes;
-using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -19,40 +19,33 @@ using Windows.ApplicationModel.Core;
 using Windows.Foundation;
 using Windows.Foundation.Collections;
 
-// To learn more about WinUI, the WinUI project structure,
-// and more about our project templates, see: http://aka.ms/winui-project-info.
-
 namespace FileDrop
 {
-    /// <summary>
-    /// Provides application-specific behavior to supplement the default Application class.
-    /// </summary>
     public partial class App : Application
     {
-        /// <summary>
-        /// Initializes the singleton application object.  This is the first line of authored code
-        /// executed, and as such is the logical equivalent of main() or WinMain().
-        /// </summary>
+        public static MainWindow mainWindow { get; set; }
+
         public App()
         {
             this.InitializeComponent();
             Repo.InitializeDatabase();
+            UnhandledException += App_UnhandledException;
         }
+        private async void App_UnhandledException(object sender, UnhandledExceptionEventArgs e)
+        {
+            e.Handled = true;
+            Repo.SaveAndClose();
+            if (WiFiDirectAdvertiser.Started)
+                WiFiDirectAdvertiser.StopAdvertisement();
+            WiFiDirectConnector.StopWatcher();
 
-        public static MainWindow mainWindow { get; set; }
-
-        /// <summary>
-        /// Invoked when the application is launched normally by the end user.  Other entry points
-        /// will be used such as when the application is launched to open a specific file.
-        /// </summary>
-        /// <param name="args">Details about the launch request and process.</param>
+            await ModelDialog.ShowDialog("提示", "发生未捕获的异常" + e.Message);
+            Exit();
+        }
         protected override void OnLaunched(Microsoft.UI.Xaml.LaunchActivatedEventArgs args)
         {
             mainWindow = new MainWindow();
-            m_window = mainWindow;
-            m_window.Activate();
+            mainWindow.Activate();
         }
-
-        private Window m_window;
     }
 }
