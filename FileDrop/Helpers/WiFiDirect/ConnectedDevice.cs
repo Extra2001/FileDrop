@@ -16,18 +16,21 @@ namespace FileDrop.Helpers.WiFiDirect
         public StreamSocketListener socketListener { get; }
         private HostName remoteHostName { get; }
         private SocketReaderWriter SocketRW { get; set; }
+        private bool fromConnector { get; set; }
 
         public delegate void _RecievedSocketConnection(ConnectedDevice device, SocketReaderWriter socket);
         public event _RecievedSocketConnection RecievedSocketConnection;
 
-        public ConnectedDevice(WiFiDirectDevice wfdDevice)
+        public ConnectedDevice(WiFiDirectDevice wfdDevice, bool fromConnector)
         {
             WfdDevice = wfdDevice;
             IReadOnlyList<EndpointPair> endpointPairs = wfdDevice.GetConnectionEndpointPairs();
             remoteHostName = endpointPairs[0].RemoteHostName;
             socketListener = new StreamSocketListener();
             socketListener.ConnectionReceived += SocketListener_ConnectionReceived;
-            _ = socketListener.BindEndpointAsync(remoteHostName, ConnectDefinition.strServerPort);
+            if (!fromConnector)
+                _ = socketListener.BindEndpointAsync(remoteHostName, ConnectDefinition.strServerPort);
+            this.fromConnector = fromConnector;
         }
 
         private void SocketListener_ConnectionReceived(StreamSocketListener sender, StreamSocketListenerConnectionReceivedEventArgs args)
@@ -38,9 +41,9 @@ namespace FileDrop.Helpers.WiFiDirect
 
         public async Task<SocketReaderWriter> EstablishSocket()
         {
-            if (SocketRW != null)
+            if (SocketRW != null || !fromConnector)
                 return SocketRW;
-            ModelDialog.ShowWaiting("请稍后", "正在建立连接...");
+            ModelDialog.ShowWaiting("请稍后", "正在建立L4连接...");
             StreamSocket clientSocket = new StreamSocket();
             try
             {

@@ -61,12 +61,6 @@ namespace FileDrop.Helpers.WiFiDirect
             connectedDevice?.Dispose();
             connectedDevice = null;
         }
-        private static void ConnectedDevice_RecievedSocketConnection(ConnectedDevice device, SocketReaderWriter socket)
-        {
-            ModelDialog.ShowWaiting("请稍后", $"已建立连接，等待对方发送传输请求...");
-            socket.StartRead(SocketRead.RecieveRead);
-        }
-
         private static async Task<bool> IsAepPairedAsync(string deviceId)
         {
             List<string> additionalProperties = new List<string>();
@@ -94,9 +88,10 @@ namespace FileDrop.Helpers.WiFiDirect
 
         private static void OnConnectionRequested(WiFiDirectConnectionListener sender, WiFiDirectConnectionRequestedEventArgs connectionEventArgs)
         {
-            ModelDialog.ShowWaiting("请稍后", $"设备正在请求连接...");
+            ModelDialog.ShowWaiting("请稍后", $"设备正在请求L2连接...");
             WiFiDirectConnectionRequest connectionRequest = connectionEventArgs.GetConnectionRequest();
-            ModelDialog.ShowWaiting("请稍后", $"设备\"{connectionRequest.DeviceInformation.Name}\"正在请求连接...");
+            ModelDialog.ShowWaiting
+                ("请稍后", $"设备\"{connectionRequest.DeviceInformation.Name}\"正在请求L2连接...");
 
             App.mainWindow.DispatcherQueue.TryEnqueue(async () =>
             {
@@ -143,12 +138,16 @@ namespace FileDrop.Helpers.WiFiDirect
 
             // Register for the ConnectionStatusChanged event handler
             wfdDevice.ConnectionStatusChanged += OnConnectionStatusChanged;
-            connectedDevice = new ConnectedDevice(wfdDevice);
+            connectedDevice = new ConnectedDevice(wfdDevice, false);
             connectedDevice.RecievedSocketConnection += ConnectedDevice_RecievedSocketConnection;
 
             return true;
         }
-
+        private static void ConnectedDevice_RecievedSocketConnection(ConnectedDevice device, SocketReaderWriter socket)
+        {
+            ModelDialog.ShowWaiting("请稍后", $"已建立连接，等待对方发送传输请求...");
+            socket.StartRead(SocketRead.RecieveRead);
+        }
         private static void OnStatusChanged(WiFiDirectAdvertisementPublisher sender, WiFiDirectAdvertisementPublisherStatusChangedEventArgs statusEventArgs)
         {
             if (statusEventArgs.Status == WiFiDirectAdvertisementPublisherStatus.Started)

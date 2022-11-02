@@ -160,10 +160,7 @@ namespace FileDrop.Helpers.WiFiDirect
                 // Register for the ConnectionStatusChanged event handler
                 wfdDevice.ConnectionStatusChanged += OnConnectionStatusChanged;
 
-                IReadOnlyList<EndpointPair> endpointPairs = wfdDevice.GetConnectionEndpointPairs();
-                HostName remoteHostName = endpointPairs[0].RemoteHostName;
-
-                connectedDevice = new ConnectedDevice(wfdDevice);
+                connectedDevice = new ConnectedDevice(wfdDevice, true);
                 callback.Invoke(true);
             });
         }
