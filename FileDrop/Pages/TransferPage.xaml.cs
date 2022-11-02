@@ -219,14 +219,16 @@ namespace FileDrop.Pages
                 return;
             }
             var dc = WiFiDirectConnector.deviceContents.Where(x => x.Id == apv.Id).FirstOrDefault();
-
-            if (await WiFiDirectConnector.ConnectDevice(dc.deviceInfo))
+            WiFiDirectConnector.ConnectDevice(dc.deviceInfo, async success =>
             {
-                var RW = await WiFiDirectConnector.connectedDevice.EstablishSocket();
-                await RW.WriteAsync(info);
-                ModelDialog.ShowWaiting("请稍后", "正在等待对方回应...");
-                RW.StartRead(SocketRead.SendRead);
-            }
+                if (success)
+                {
+                    var RW = await WiFiDirectConnector.connectedDevice.EstablishSocket();
+                    await RW.WriteAsync(info);
+                    ModelDialog.ShowWaiting("请稍后", "正在等待对方回应...");
+                    RW.StartRead(SocketRead.SendRead);
+                }
+            });
         }
     }
 }

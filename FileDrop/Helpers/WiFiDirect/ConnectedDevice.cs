@@ -49,6 +49,7 @@ namespace FileDrop.Helpers.WiFiDirect
             catch (Exception ex)
             {
                 _ = ModelDialog.ShowDialog("提示", "出现错误：" + ex.Message);
+                throw new Exception("出现错误：" + ex.Message);
             }
             SocketRW = new SocketReaderWriter(clientSocket);
             return SocketRW;

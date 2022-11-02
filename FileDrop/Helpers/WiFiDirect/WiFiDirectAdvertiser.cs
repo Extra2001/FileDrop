@@ -61,51 +61,6 @@ namespace FileDrop.Helpers.WiFiDirect
             connectedDevice?.Dispose();
             connectedDevice = null;
         }
-
-        private static async Task<bool> HandleConnectionRequestAsync
-            (WiFiDirectConnectionRequest connectionRequest)
-        {
-            //bool isPaired = (connectionRequest.DeviceInformation.Pairing?.IsPaired == true) ||
-            //                (await IsAepPairedAsync(connectionRequest.DeviceInformation.Id));
-
-            //// Pair device if not already paired and not using legacy settings
-            //if (!isPaired && !_publisher.Advertisement.LegacySettings.IsEnabled)
-            //{
-            //    if (!await ConnectHelper.RequestPairDeviceAsync(connectionRequest.DeviceInformation.Pairing))
-            //    {
-            //        return false;
-            //    }
-            //}
-
-            if(connectedDevice!=null)
-            {
-                try
-                {
-                    connectedDevice.Dispose();
-                }
-                catch { }
-                connectedDevice = null;
-            }
-
-            WiFiDirectDevice wfdDevice = null;
-            try
-            {
-                wfdDevice = await WiFiDirectDevice.FromIdAsync(connectionRequest.DeviceInformation.Id);
-            }
-            catch (Exception ex)
-            {
-                _ = ModelDialog.ShowDialog("错误", $"连接失败{ex.Message}");
-                return false;
-            }
-
-            // Register for the ConnectionStatusChanged event handler
-            wfdDevice.ConnectionStatusChanged += OnConnectionStatusChanged;
-            connectedDevice = new ConnectedDevice(wfdDevice);
-            connectedDevice.RecievedSocketConnection += ConnectedDevice_RecievedSocketConnection;
-
-            return true;
-        }
-
         private static void ConnectedDevice_RecievedSocketConnection(ConnectedDevice device, SocketReaderWriter socket)
         {
             ModelDialog.ShowWaiting("请稍后", $"已建立连接，等待对方发送传输请求...");
@@ -137,17 +92,61 @@ namespace FileDrop.Helpers.WiFiDirect
             return pairedDeviceCollection.Count > 0;
         }
 
-        private static async void OnConnectionRequested(WiFiDirectConnectionListener sender, WiFiDirectConnectionRequestedEventArgs connectionEventArgs)
+        private static void OnConnectionRequested(WiFiDirectConnectionListener sender, WiFiDirectConnectionRequestedEventArgs connectionEventArgs)
         {
             ModelDialog.ShowWaiting("请稍后", $"设备正在请求连接...");
             WiFiDirectConnectionRequest connectionRequest = connectionEventArgs.GetConnectionRequest();
             ModelDialog.ShowWaiting("请稍后", $"设备\"{connectionRequest.DeviceInformation.Name}\"正在请求连接...");
-            bool success = await HandleConnectionRequestAsync(connectionRequest);
 
-            if (!success)
+            App.mainWindow.DispatcherQueue.TryEnqueue(async () =>
             {
-                connectionRequest.Dispose();
+                bool success = await HandleConnectionRequestAsync(connectionRequest);
+                if (!success)
+                    connectionRequest.Dispose();
+            });
+        }
+        private static async Task<bool> HandleConnectionRequestAsync
+           (WiFiDirectConnectionRequest connectionRequest)
+        {
+            //bool isPaired = (connectionRequest.DeviceInformation.Pairing?.IsPaired == true) ||
+            //                (await IsAepPairedAsync(connectionRequest.DeviceInformation.Id));
+
+            //// Pair device if not already paired and not using legacy settings
+            //if (!isPaired && !_publisher.Advertisement.LegacySettings.IsEnabled)
+            //{
+            //    if (!await ConnectHelper.RequestPairDeviceAsync(connectionRequest.DeviceInformation.Pairing))
+            //    {
+            //        return false;
+            //    }
+            //}
+
+            if (connectedDevice != null)
+            {
+                try
+                {
+                    connectedDevice.Dispose();
+                }
+                catch { }
+                connectedDevice = null;
             }
+
+            WiFiDirectDevice wfdDevice = null;
+            try
+            {
+                wfdDevice = await WiFiDirectDevice.FromIdAsync(connectionRequest.DeviceInformation.Id);
+            }
+            catch (Exception ex)
+            {
+                _ = ModelDialog.ShowDialog("错误", $"连接失败{ex.Message}");
+                return false;
+            }
+
+            // Register for the ConnectionStatusChanged event handler
+            wfdDevice.ConnectionStatusChanged += OnConnectionStatusChanged;
+            connectedDevice = new ConnectedDevice(wfdDevice);
+            connectedDevice.RecievedSocketConnection += ConnectedDevice_RecievedSocketConnection;
+
+            return true;
         }
 
         private static void OnStatusChanged(WiFiDirectAdvertisementPublisher sender, WiFiDirectAdvertisementPublisherStatusChangedEventArgs statusEventArgs)

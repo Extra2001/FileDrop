@@ -120,47 +120,52 @@ namespace FileDrop.Helpers.WiFiDirect
             ScanComplete?.Invoke();
         }
         #endregion
-        public static async Task<bool> ConnectDevice(DeviceInformation deviceInfo)
+        public static void ConnectDevice(DeviceInformation deviceInfo, Action<bool> callback)
         {
-            ModelDialog.ShowWaiting("请稍后", "正在连接设备...");
-
-            if (connectedDevice != null)
+            App.mainWindow.DispatcherQueue.TryEnqueue(async () =>
             {
-                try { connectedDevice.Dispose(); } catch { }
-            }
-            //if (!deviceInfo.Pairing.IsPaired)
-            //{
-            //    if (!await ConnectHelper.RequestPairDeviceAsync(deviceInfo.Pairing))
-            //    {
-            //        return false;
-            //    }
-            //}
+                ModelDialog.ShowWaiting("请稍后", "正在连接设备...");
 
-            WiFiDirectDevice wfdDevice = null;
-            try
-            {
-                // IMPORTANT: FromIdAsync needs to be called from the UI thread
-                wfdDevice = await WiFiDirectDevice.FromIdAsync(deviceInfo.Id);
-            }
-            catch (TaskCanceledException)
-            {
-                _ = ModelDialog.ShowDialog("提示", "发送已被取消");
-                return false;
-            }
-            catch (Exception ex)
-            {
-                _ = ModelDialog.ShowDialog("提示", "发送异常" + ex.Message);
-                return false;
-            }
+                if (connectedDevice != null)
+                {
+                    try { connectedDevice.Dispose(); } catch { }
+                }
+                //if (!deviceInfo.Pairing.IsPaired)
+                //{
+                //    if (!await ConnectHelper.RequestPairDeviceAsync(deviceInfo.Pairing))
+                //    {
+                //        return false;
+                //    }
+                //}
 
-            // Register for the ConnectionStatusChanged event handler
-            wfdDevice.ConnectionStatusChanged += OnConnectionStatusChanged;
+                WiFiDirectDevice wfdDevice = null;
+                try
+                {
+                    // IMPORTANT: FromIdAsync needs to be called from the UI thread
+                    wfdDevice = await WiFiDirectDevice.FromIdAsync(deviceInfo.Id);
+                }
+                catch (TaskCanceledException)
+                {
+                    _ = ModelDialog.ShowDialog("提示", "发送已被取消");
+                    callback.Invoke(false);
+                    return;
+                }
+                catch (Exception ex)
+                {
+                    _ = ModelDialog.ShowDialog("提示", "发送异常" + ex.Message);
+                    callback.Invoke(false);
+                    return;
+                }
 
-            IReadOnlyList<EndpointPair> endpointPairs = wfdDevice.GetConnectionEndpointPairs();
-            HostName remoteHostName = endpointPairs[0].RemoteHostName;
+                // Register for the ConnectionStatusChanged event handler
+                wfdDevice.ConnectionStatusChanged += OnConnectionStatusChanged;
 
-            connectedDevice = new ConnectedDevice(wfdDevice);
-            return true;
+                IReadOnlyList<EndpointPair> endpointPairs = wfdDevice.GetConnectionEndpointPairs();
+                HostName remoteHostName = endpointPairs[0].RemoteHostName;
+
+                connectedDevice = new ConnectedDevice(wfdDevice);
+                callback.Invoke(true);
+            });
         }
 
         private static void OnConnectionStatusChanged(WiFiDirectDevice sender, object arg)
