@@ -133,6 +133,8 @@ namespace FileDrop.Helpers.WiFiDirect
             catch (Exception ex)
             {
                 _ = ModelDialog.ShowDialog("错误", $"连接失败{ex.Message}");
+                StopAdvertisement();
+                StartAdvertisement();
                 return false;
             }
 

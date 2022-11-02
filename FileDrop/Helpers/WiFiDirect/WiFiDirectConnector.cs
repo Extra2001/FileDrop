@@ -151,6 +151,8 @@ namespace FileDrop.Helpers.WiFiDirect
                 catch (TaskCanceledException)
                 {
                     _ = ModelDialog.ShowDialog("提示", "发送已被取消");
+                    StopWatcher();
+                    StartWatcher();
                     callback.Invoke(false);
                     return;
                 }
@@ -164,6 +166,8 @@ namespace FileDrop.Helpers.WiFiDirect
                     else
                     {
                         _ = ModelDialog.ShowDialog("提示", "发送异常" + ex.Message);
+                        StopWatcher();
+                        StartWatcher();
                         callback.Invoke(false);
                         return;
                     }
@@ -171,6 +175,8 @@ namespace FileDrop.Helpers.WiFiDirect
                 catch (Exception ex)
                 {
                     _ = ModelDialog.ShowDialog("提示", "发送异常" + ex.Message);
+                    StopWatcher();
+                    StartWatcher();
                     callback.Invoke(false);
                     return;
                 }
