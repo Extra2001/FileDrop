@@ -31,20 +31,23 @@ namespace FileDrop.Helpers.Dialog
 
         public static ShowedDialog ShowWaiting(string title, string content)
         {
-            if (showedDialogs != null)
-                showedDialogs.Hide();
-
             ContentDialog dialog = new ContentDialog();
-
             dialog.XamlRoot = App.mainWindow.Content.XamlRoot;
             dialog.Title = title;
             dialog.DefaultButton = ContentDialogButton.Primary;
             dialog.Content = content;
-            _ = dialog.ShowAsync();
-            return new ShowedDialog()
+
+            App.mainWindow.DispatcherQueue.TryEnqueue(() =>
+            {
+                if (showedDialogs != null)
+                    showedDialogs.Hide();
+                _ = dialog.ShowAsync();
+            });
+            showedDialogs = new ShowedDialog()
             {
                 dialog = dialog
             };
+            return showedDialogs;
         }
     }
 }
