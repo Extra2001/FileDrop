@@ -161,7 +161,11 @@ namespace FileDrop.Helpers.WiFiDirect
         {
             if (sender.ConnectionStatus == WiFiDirectConnectionStatus.Disconnected)
             {
-                connectedDevice.Dispose();
+                try
+                {
+                    connectedDevice.Dispose();
+                }
+                catch { }
                 connectedDevice = null;
             }
         }
