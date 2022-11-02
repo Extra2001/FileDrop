@@ -118,7 +118,7 @@ namespace FileDrop.Helpers.WiFiDirect
             return null;
         }
 
-        public async void StartRead(Action<SocketRead> action)
+        public async void StartRead(Action<SocketRead> action, Action<Exception> onError)
         {
             try
             {
@@ -130,8 +130,10 @@ namespace FileDrop.Helpers.WiFiDirect
                     action(read);
                 }
             }
-            catch (Exception)
-            { }
+            catch (Exception ex)
+            {
+                onError.Invoke(ex);
+            }
         }
 
         public class SocketRead

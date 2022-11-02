@@ -226,7 +226,7 @@ namespace FileDrop.Pages
                     var RW = await WiFiDirectConnector.connectedDevice.EstablishSocket();
                     await RW.WriteAsync(info);
                     ModelDialog.ShowWaiting("请稍后", "正在等待对方回应...");
-                    RW.StartRead(SocketRead.SendRead);
+                    RW.StartRead(SocketRead.SendRead, SocketRead.OnError);
                 }
             });
         }

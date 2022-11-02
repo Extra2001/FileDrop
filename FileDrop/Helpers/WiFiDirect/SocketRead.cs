@@ -49,5 +49,10 @@ namespace FileDrop.Helpers.WiFiDirect
         {
             ModelDialog.ShowWaiting("请稍后", "正在开始传输...");
         }
+
+        public static void OnError(Exception ex)
+        {
+            _ = ModelDialog.ShowDialog("错误", ex.Message);
+        }
     }
 }

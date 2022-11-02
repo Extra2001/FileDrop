@@ -140,13 +140,13 @@ namespace FileDrop.Helpers.WiFiDirect
             wfdDevice.ConnectionStatusChanged += OnConnectionStatusChanged;
             connectedDevice = new ConnectedDevice(wfdDevice, false);
             connectedDevice.RecievedSocketConnection += ConnectedDevice_RecievedSocketConnection;
-
+            ModelDialog.ShowWaiting("请稍后", $"已建立L2连接，等待L4连接请求...");
             return true;
         }
         private static void ConnectedDevice_RecievedSocketConnection(ConnectedDevice device, SocketReaderWriter socket)
         {
-            ModelDialog.ShowWaiting("请稍后", $"已建立连接，等待对方发送传输请求...");
-            socket.StartRead(SocketRead.RecieveRead);
+            ModelDialog.ShowWaiting("请稍后", $"已建立L4连接，等待对方发送传输请求...");
+            socket.StartRead(SocketRead.RecieveRead, SocketRead.OnError);
         }
         private static void OnStatusChanged(WiFiDirectAdvertisementPublisher sender, WiFiDirectAdvertisementPublisherStatusChangedEventArgs statusEventArgs)
         {
