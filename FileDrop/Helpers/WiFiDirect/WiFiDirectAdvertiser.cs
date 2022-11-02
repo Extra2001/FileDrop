@@ -108,7 +108,7 @@ namespace FileDrop.Helpers.WiFiDirect
 
         private static void ConnectedDevice_RecievedSocketConnection(ConnectedDevice device, SocketReaderWriter socket)
         {
-            _ = ModelDialog.ShowWaiting("请稍后", $"已建立连接，等待对方发送传输请求...");
+            ModelDialog.ShowWaiting("请稍后", $"已建立连接，等待对方发送传输请求...");
             socket.StartRead(SocketRead.RecieveRead);
         }
 
