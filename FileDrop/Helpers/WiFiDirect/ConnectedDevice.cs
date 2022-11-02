@@ -25,7 +25,9 @@ namespace FileDrop.Helpers.WiFiDirect
         {
             WfdDevice = wfdDevice;
             IReadOnlyList<EndpointPair> endpointPairs = wfdDevice.GetConnectionEndpointPairs();
-            remoteHostName = endpointPairs[0].RemoteHostName;
+            if (fromConnector)
+                remoteHostName = endpointPairs[0].RemoteHostName;
+            else remoteHostName = endpointPairs[0].LocalHostName;
             socketListener = new StreamSocketListener();
             socketListener.ConnectionReceived += SocketListener_ConnectionReceived;
             if (!fromConnector)
@@ -44,6 +46,7 @@ namespace FileDrop.Helpers.WiFiDirect
             if (SocketRW != null || !fromConnector)
                 return SocketRW;
             ModelDialog.ShowWaiting("请稍后", "正在建立L4连接...");
+            await Task.Delay(2000);
             StreamSocket clientSocket = new StreamSocket();
             try
             {
@@ -52,7 +55,6 @@ namespace FileDrop.Helpers.WiFiDirect
             catch (Exception ex)
             {
                 _ = ModelDialog.ShowDialog("提示", "出现错误：" + ex.Message);
-                throw new Exception("出现错误：" + ex.Message);
             }
             SocketRW = new SocketReaderWriter(clientSocket);
             return SocketRW;
