@@ -138,8 +138,9 @@ namespace FileDrop.Helpers.WiFiDirect
                         return;
                     }
                 }
-
+                int retry = 0;
                 WiFiDirectDevice wfdDevice = null;
+                tryConnect:
                 try
                 {
                     // IMPORTANT: FromIdAsync needs to be called from the UI thread
@@ -150,6 +151,20 @@ namespace FileDrop.Helpers.WiFiDirect
                     _ = ModelDialog.ShowDialog("提示", "发送已被取消");
                     callback.Invoke(false);
                     return;
+                }
+                catch (Exception ex) when (ex.HResult == unchecked((int)0x8007001F))
+                {
+                    if (retry < 50)
+                    {
+                        retry++;
+                        goto tryConnect;
+                    }
+                    else
+                    {
+                        _ = ModelDialog.ShowDialog("提示", "发送异常" + ex.Message);
+                        callback.Invoke(false);
+                        return;
+                    }
                 }
                 catch (Exception ex)
                 {
