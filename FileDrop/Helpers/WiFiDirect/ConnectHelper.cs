@@ -22,11 +22,11 @@ namespace FileDrop.Helpers.WiFiDirect
             customPairing.PairingRequested += OnPairingRequested;
 
             DevicePairingResult result = await customPairing.PairAsync(devicePairingKinds, DevicePairingProtectionLevel.Default, connectionParams);
-            if (result.Status != DevicePairingResultStatus.Paired)
+            if (result.Status == DevicePairingResultStatus.Paired || result.Status == DevicePairingResultStatus.AlreadyPaired)
             {
-                return false;
+                return true;
             }
-            return true;
+            return false;
         }
 
         private static void OnPairingRequested
