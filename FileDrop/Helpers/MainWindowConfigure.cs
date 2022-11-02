@@ -167,9 +167,6 @@ namespace FileDrop.Helpers
             {
                 AppTitle.Foreground =
                     (SolidColorBrush)App.Current.Resources["WindowCaptionForeground"];
-
-                if (TempStorage.Advertising && (!WiFiDirectAdvertiser.Started))
-                    WiFiDirectAdvertiser.StartAdvertisement();
             }
         }
         private void MainWindow_Closed(object sender, WindowEventArgs args)

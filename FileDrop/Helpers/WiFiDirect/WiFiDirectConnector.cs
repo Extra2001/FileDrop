@@ -26,7 +26,7 @@ namespace FileDrop.Helpers.WiFiDirect
     public class WiFiDirectConnector
     {
         private static DeviceWatcher _deviceWatcher = null;
-
+        private static WiFiDirectAdvertisementPublisher _publisher = new WiFiDirectAdvertisementPublisher();
         public static ObservableCollection<DiscoveredDevice> DiscoveredDevices { get; }
             = new ObservableCollection<DiscoveredDevice>();
         public static ConnectedDevice connectedDevice;
@@ -42,9 +42,9 @@ namespace FileDrop.Helpers.WiFiDirect
 
         public static void StartWatcher()
         {
-            if (!WiFiDirectAdvertiser.Started)
-                WiFiDirectAdvertiser.StartAdvertisement();
-            if (!WiFiDirectAdvertiser.Started)
+            if (_publisher.Status != WiFiDirectAdvertisementPublisherStatus.Started)
+                _publisher.Start();
+            if (_publisher.Status != WiFiDirectAdvertisementPublisherStatus.Started)
                 return;
             DiscoveredDevices.Clear();
             deviceContents.Clear();
@@ -65,6 +65,8 @@ namespace FileDrop.Helpers.WiFiDirect
 
         public static void StopWatcher()
         {
+            if (_publisher.Status == WiFiDirectAdvertisementPublisherStatus.Started)
+                _publisher.Stop();
             if (_deviceWatcher != null)
             {
                 try

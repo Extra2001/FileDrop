@@ -42,8 +42,15 @@ namespace FileDrop.Pages
         {
             base.OnNavigatedTo(e);
             LoadRecieved();
+            if (TempStorage.Advertising && (!WiFiDirectAdvertiser.Started))
+                WiFiDirectAdvertiser.StartAdvertisement();
         }
-
+        protected override void OnNavigatingFrom(NavigatingCancelEventArgs e)
+        {
+            if (WiFiDirectAdvertiser.Started)
+                WiFiDirectAdvertiser.StopAdvertisement();
+            base.OnNavigatingFrom(e);
+        }
         public void LoadRecieved()
         {
             transfers.Clear();
@@ -52,7 +59,6 @@ namespace FileDrop.Pages
             foreach (var item in find)
                 transfers.Add(item.ToRecievedTransfer());
         }
-
         private void RefreshButtonState()
         {
             int checkedCount = transfers.Where(x => x.Checked).Count();
@@ -76,13 +82,11 @@ namespace FileDrop.Pages
                 deleteSelect.IsEnabled = true;
             }
         }
-
         private async void CheckBox_Checked(object sender, RoutedEventArgs e)
         {
             await Task.Delay(30);
             RefreshButtonState();
         }
-
         private void selectAll_Click(object sender, RoutedEventArgs e)
         {
             foreach (var item in transfers.Where(x => !x.Checked))
@@ -90,13 +94,11 @@ namespace FileDrop.Pages
 
             Helpers.Dialog.ToastDialog.Show("Test");
         }
-        
         private void deselectAll_Click(object sender, RoutedEventArgs e)
         {
             foreach (var item in transfers.Where(x => x.Checked))
                 item.Checked = false;
         }
-
         private void deleteConfirmButton_Click(object sender, RoutedEventArgs e)
         {
             var list = transfers.Where(x => x.Checked).ToList();
@@ -107,7 +109,6 @@ namespace FileDrop.Pages
                 transfers.Remove(item);
             deleteConfirmFlyout.Hide();
         }
-
         private void deleteConfirmButton2_Click(object sender, RoutedEventArgs e)
         {
             int id = (int)((sender as Button).Tag);
@@ -120,7 +121,6 @@ namespace FileDrop.Pages
             }
             openedFlyout?.Hide();
         }
-
         private void Flyout_Opened(object sender, object e)
         {
             openedFlyout = sender as Flyout;
