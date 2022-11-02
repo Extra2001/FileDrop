@@ -40,11 +40,15 @@ namespace FileDrop.Helpers.Dialog
                 dialog.Title = title;
                 dialog.DefaultButton = ContentDialogButton.Primary;
                 dialog.Content = content;
-                _ = dialog.ShowAsync();
-                showedDialogs = new ShowedDialog()
+                try
                 {
-                    dialog = dialog
-                };
+                    _ = dialog.ShowAsync();
+                    showedDialogs = new ShowedDialog()
+                    {
+                        dialog = dialog
+                    };
+                }
+                catch { }
             });
         }
     }
