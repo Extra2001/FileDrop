@@ -69,8 +69,9 @@ namespace FileDrop.Helpers.TransferHelper.Tranferer
             var path = item.Path;
             var length = new FileInfo(path).Length;
             var file = await StorageFile.GetFileFromPathAsync(path);
-            var stream = await file.OpenSequentialReadAsync();
-            var reader = new DataReader(stream);
+
+            using var stream = await file.OpenSequentialReadAsync();
+            using var reader = new DataReader(stream);
 
             int total = (int)(length / packSize) + 1;
 
@@ -82,14 +83,8 @@ namespace FileDrop.Helpers.TransferHelper.Tranferer
                     Total = total
                 };
                 IBuffer data;
-                if (index == total - 1)
-                {
-                    data = reader.ReadBuffer((uint)(length - index * packSize));
-                }
-                else
-                {
-                    data = reader.ReadBuffer(packSize);
-                }
+                var l = await reader.LoadAsync(packSize);
+                data = reader.ReadBuffer(l);
                 TransferStatusManager.manager.ReportPack(index, total);
                 await socket.WriteAsync(packInfo, data);
                 await socket.ReadAsync();
