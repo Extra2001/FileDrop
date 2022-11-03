@@ -33,7 +33,7 @@ namespace FileDrop.Helpers
         public static string GenerateRecieveFolder(string deviceName)
         {
             var path = GetRecievePath();
-            var name = deviceName + "_" + DateTime.Now.Millisecond;
+            var name = deviceName + "_" + DateTimeOffset.Now.ToUnixTimeMilliseconds();
             var folder = Path.Combine(path, name);
             Directory.CreateDirectory(folder);
             return folder;

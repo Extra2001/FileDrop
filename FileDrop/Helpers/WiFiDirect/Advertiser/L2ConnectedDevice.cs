@@ -38,7 +38,7 @@ namespace FileDrop.Helpers.WiFiDirect.Advertiser
         public async Task<SocketReaderWriter> EstablishSocket()
         {
             int retry = 0;
-            while (SocketRW == null && retry <= 100)
+            while (SocketRW == null && retry <= 300)
             {
                 retry++;
                 await Task.Delay(100);

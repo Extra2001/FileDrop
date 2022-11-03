@@ -16,7 +16,7 @@ namespace FileDrop.Helpers.TransferHelper
 {
     public static class PrepareFile
     {
-        public static long FileLengthThreshold = 10240;
+        public static long FileLengthThreshold = 100 * 1024 * 1024;
 
         public static async Task<TransferInfo> Prepare(IEnumerable<ToSendFile> files)
         {

@@ -3,6 +3,7 @@ using FileDrop.Helpers.TransferHelper.Reciever;
 using FileDrop.Helpers.TransferHelper.Schemas;
 using FileDrop.Helpers.WiFiDirect;
 using FileDrop.Models;
+using Microsoft.UI.Xaml.Controls;
 using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
@@ -11,6 +12,8 @@ using System.Linq;
 using System.Security.Principal;
 using System.Text;
 using System.Threading.Tasks;
+using System.Xml.Linq;
+using Windows.Storage;
 using Windows.Storage.Streams;
 
 namespace FileDrop.Helpers.TransferHelper.Reviever
@@ -66,13 +69,22 @@ namespace FileDrop.Helpers.TransferHelper.Reviever
 
         private async Task RecieveItem(TransferItem item)
         {
-            var path = Path.Combine(transfer.DirectoryName, item.InPackagePath);
-            var dir = Path.GetDirectoryName(path);
-            var name = Path.GetFileName(path);
-            if (!Directory.Exists(dir))
-                Directory.CreateDirectory(dir);
-            var folder = await Windows.Storage.StorageFolder.GetFolderFromPathAsync(dir);
-            var file = await folder.CreateFileAsync(name);
+            StorageFile file;
+            if (item.TransferType == TransferType.File)
+            {
+                var path = Path.Combine(transfer.DirectoryName, item.InPackagePath);
+                var dir = Path.GetDirectoryName(path);
+                var name = Path.GetFileName(path);
+                if (!Directory.Exists(dir))
+                    Directory.CreateDirectory(dir);
+                var folder = await Windows.Storage.StorageFolder.GetFolderFromPathAsync(dir);
+                file = await folder.CreateFileAsync(name);
+            }
+            else
+            {
+                var folder = await Windows.Storage.StorageFolder.GetFolderFromPathAsync(transfer.DirectoryName);
+                file = await folder.CreateFileAsync("package.zip");
+            }
             using var stream = await file.OpenAsync(Windows.Storage.FileAccessMode.ReadWrite, Windows.Storage.StorageOpenOptions.AllowReadersAndWriters);
             using var writer = new DataWriter(stream);
 
@@ -84,6 +96,7 @@ namespace FileDrop.Helpers.TransferHelper.Reviever
                 total = packInfo.Total;
                 index = packInfo.Index;
                 RecieveStatusManager.manager.ReportPack(index, total);
+                index++;
                 writer.WriteBuffer(rec.payload);
                 await writer.StoreAsync();
                 await socket.WriteAsync(new TransferRespond() { Recieve = true });
