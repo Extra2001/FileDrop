@@ -41,7 +41,6 @@ namespace FileDrop.Helpers.WiFiDirect
         }
         public async Task WriteAsync(object obj, IBuffer payload = null)
         {
-            ModelDialog.ShowWaiting("请稍后", "正在请求发送...");
             try
             {
                 var info = JsonConvert.SerializeObject(obj);

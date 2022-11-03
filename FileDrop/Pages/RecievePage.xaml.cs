@@ -56,7 +56,8 @@ namespace FileDrop.Pages
         {
             transfers.Clear();
             var collection = Repo.database.GetCollection<Transfer>();
-            var find = collection.FindAll().OrderByDescending(x => x.StartTime);
+            var find = collection.Find(x => x.TransferDirection == TransferDirection.Recieve)
+                .OrderByDescending(x => x.StartTime);
             foreach (var item in find)
                 transfers.Add(item.ToRecievedTransfer());
         }

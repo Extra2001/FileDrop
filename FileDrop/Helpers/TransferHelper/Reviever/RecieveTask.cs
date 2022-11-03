@@ -73,8 +73,8 @@ namespace FileDrop.Helpers.TransferHelper.Reviever
                 Directory.CreateDirectory(dir);
             var folder = await Windows.Storage.StorageFolder.GetFolderFromPathAsync(dir);
             var file = await folder.CreateFileAsync(name);
-            var stream = await file.OpenAsync(Windows.Storage.FileAccessMode.ReadWrite, Windows.Storage.StorageOpenOptions.AllowReadersAndWriters);
-            var writer = new DataWriter(stream);
+            using var stream = await file.OpenAsync(Windows.Storage.FileAccessMode.ReadWrite, Windows.Storage.StorageOpenOptions.AllowReadersAndWriters);
+            using var writer = new DataWriter(stream);
 
             int total = 1, index = 0;
             while (index < total)
@@ -85,6 +85,7 @@ namespace FileDrop.Helpers.TransferHelper.Reviever
                 index = packInfo.Index;
                 RecieveStatusManager.manager.ReportPack(index, total);
                 writer.WriteBuffer(rec.payload);
+                await writer.StoreAsync();
                 await socket.WriteAsync(new TransferRespond() { Recieve = true });
             }
         }
