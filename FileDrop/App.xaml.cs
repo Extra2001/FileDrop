@@ -1,5 +1,6 @@
 ﻿using FileDrop.Helpers;
 using FileDrop.Helpers.Dialog;
+using FileDrop.Helpers.TransferHelper.Reviever;
 using FileDrop.Helpers.WiFiDirect.Advertiser;
 using FileDrop.Helpers.WiFiDirect.Connector;
 using Microsoft.UI.Xaml;
@@ -23,7 +24,7 @@ namespace FileDrop
             if (WiFiDirectAdvertiser.Started)
                 WiFiDirectAdvertiser.StopAdvertisement();
             WiFiDirectConnector.StopWatcher();
-
+            RecieveTask.StopWaitForTransfer();
             await ModelDialog.ShowDialog("提示", "发生未捕获的异常" + e.Message);
             Exit();
         }

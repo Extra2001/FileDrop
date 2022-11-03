@@ -1,9 +1,7 @@
 ﻿using FileDrop.Helpers;
-using FileDrop.Helpers.BLE;
 using FileDrop.Helpers.Dialog;
 using FileDrop.Helpers.TransferHelper;
-using FileDrop.Helpers.TransferHelper.Schemas;
-using FileDrop.Helpers.TransferHelper.Tranferer;
+using FileDrop.Helpers.TransferHelper.Transferer;
 using FileDrop.Helpers.WiFiDirect;
 using FileDrop.Helpers.WiFiDirect.Connector;
 using FileDrop.Models;
@@ -22,6 +20,7 @@ using System.Collections.Specialized;
 using System.ComponentModel;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Runtime.InteropServices.WindowsRuntime;
 using System.Threading.Tasks;
 using Windows.Foundation;
@@ -189,6 +188,11 @@ namespace FileDrop.Pages
             foreach (var item in TempStorage.ToSendFiles)
                 toSendFiles.Add(item);
         }
+        private void deleteButton_Click(object sender, RoutedEventArgs e)
+        {
+            int id = (int)(sender as Button).Tag;
+            toSendFiles.Remove(toSendFiles.Where(x => x.Id == id).FirstOrDefault());
+        }
         #endregion
 
         #region SelectDevice
@@ -216,7 +220,6 @@ namespace FileDrop.Pages
 
         private async void sendButton_Click(object sender, RoutedEventArgs e)
         {
-            var info = await PrepareFile.Prepare(toSendFiles);
             var apv = deviceContents.Where(x => x.Checked).FirstOrDefault();
             if (apv == null)
             {
@@ -225,12 +228,14 @@ namespace FileDrop.Pages
             }
             var dc = WiFiDirectConnector.deviceContents.Where(x => x.Id == apv.Id).FirstOrDefault();
 
-            WiFiDirectConnector.ConnectDevice(dc.deviceInfo, async RW =>
+            ModelDialog.ShowWaiting("正在准备文件", $"正在准备要发送的文件");
+            var info = await PrepareFile.Prepare(toSendFiles);
+            WiFiDirectConnector.ConnectDevice(dc.deviceInfo, wfdDevice =>
             {
-                if (RW != null)
+                if (wfdDevice != null)
                 {
-                    var task = new TransferTask();
-                    await task.StartTransfer(RW, info);
+                    TransferTask.RequestTransfer(wfdDevice.
+                        GetConnectionEndpointPairs()[0].RemoteHostName, info);
                 }
             });
         }

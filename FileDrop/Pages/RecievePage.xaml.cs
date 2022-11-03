@@ -2,6 +2,7 @@
 using FileDrop.Helpers.WiFiDirect;
 using FileDrop.Helpers.WiFiDirect.Advertiser;
 using FileDrop.Models;
+using FileDrop.Models.Database;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Controls.Primitives;

@@ -79,7 +79,7 @@
                                         </Grid.ColumnDefinitions>
                                         <TextBlock Grid.Column="0" Text="{x:Bind Id, Mode=OneWay}" VerticalAlignment="Center"/>
                                         <TextBlock Grid.Column="1" Text="{x:Bind Name, Mode=OneWay}" VerticalAlignment="Center"/>
-                                        <Button Grid.Column="2">
+                                        <Button Grid.Column="2" Click="deleteButton_Click" Tag="{x:Bind Id, Mode=OneWay}">
                                             <Viewbox MinHeight="15" MinWidth="15">
                                                 <SymbolIcon Symbol="Delete"/>
                                             </Viewbox>

@@ -1,110 +1,66 @@
-﻿using FileDrop.Helpers.Dialog;
-using FileDrop.Helpers.TransferHelper.Reciever;
-using FileDrop.Helpers.TransferHelper.Schemas;
-using FileDrop.Helpers.WiFiDirect;
+﻿using FileDrop.Helpers.TransferHelper.Reciever;
 using FileDrop.Models;
+using FileDrop.Models.Database;
 using Microsoft.UI.Xaml.Controls;
-using Newtonsoft.Json;
+using Microsoft.UI.Xaml.Media;
 using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Security.Principal;
-using System.Text;
-using System.Threading.Tasks;
-using System.Xml.Linq;
-using Windows.Storage;
-using Windows.Storage.Streams;
+using TouchSocket.Core.Config;
+using TouchSocket.Core.Dependency;
+using TouchSocket.Core.Log;
+using TouchSocket.Core.Plugins;
+using TouchSocket.Rpc.TouchRpc;
+using TouchSocket.Sockets;
+using Windows.Devices.Portable;
 
 namespace FileDrop.Helpers.TransferHelper.Reviever
 {
-    public class RecieveTask
+    public static class RecieveTask
     {
-        private SocketReaderWriter socket;
-        private TransferInfo transferInfo;
-        private Transfer transfer;
-
-        public async Task<Transfer> StartRecieve(SocketReaderWriter socket)
+        private static InfoSocketServer server = null;
+        public static void WaitForTransfer()
         {
-            this.socket = socket;
-            var first = await socket.ReadAsync();
-            transferInfo = JsonConvert.DeserializeObject<TransferInfo>(first.info);
-            var dres = await ModelDialog.ShowDialog("开始传输",
-                $"{transferInfo.deviceName}想要共享{transferInfo.FileInfos.Count}个文件（夹）", "接受", "取消");
-            if (dres == Microsoft.UI.Xaml.Controls.ContentDialogResult.Primary)
+            if (server != null)
             {
-                await socket.WriteAsync(new TransferRespond() { Recieve = true });
-
-                RecieveStatusManager.StartNew(transferInfo.TransferInfos.Count);
-                var folder = DirectoryHelper.GenerateRecieveFolder(transferInfo.deviceName);
-                transfer = new Transfer()
-                {
-                    DirectoryName = folder,
-                    StartTime = DateTimeOffset.Now,
-                    TransferInfos = transferInfo.TransferInfos,
-                    FileInfos = transferInfo.FileInfos,
-                    From = transferInfo.deviceName,
-                    To = null,
-                    TransferDirection = TransferDirection.Recieve
-                };
-
-                for (int i = 0; i < transferInfo.TransferInfos.Count; i++)
-                {
-                    RecieveStatusManager.manager.ReportTransferItem(i);
-                    await RecieveItem(transferInfo.TransferInfos[i]);
-                }
-
-                RestoreFile.RestoreZip(Path.Combine(transfer.DirectoryName, "package.zip"));
-
-                transfer.EndTime = DateTimeOffset.Now;
-                var collection = Repo.database.GetCollection<Transfer>();
-                collection.Insert(transfer);
-                RecieveStatusManager.manager.ReportDone();
-                return transfer;
-            }
-            else
-            {
-                await socket.WriteAsync(new TransferRespond() { Recieve = false });
-                return null;
+                server = new InfoSocketServer();
+                server.Setup(new TouchSocketConfig()
+                    .SetListenIPHosts(new IPHost[] { new IPHost(31826) })
+                    .SetMaxCount(10000)
+                    .SetThreadCount(10))
+                    .Start();
             }
         }
 
-        private async Task RecieveItem(TransferItem item)
+        public static void StopWaitForTransfer()
         {
-            StorageFile file;
-            if (item.TransferType == TransferType.File)
-            {
-                var path = Path.Combine(transfer.DirectoryName, item.InPackagePath);
-                var dir = Path.GetDirectoryName(path);
-                var name = Path.GetFileName(path);
-                if (!Directory.Exists(dir))
-                    Directory.CreateDirectory(dir);
-                var folder = await StorageFolder.GetFolderFromPathAsync(dir);
-                file = await folder.CreateFileAsync(name);
-            }
-            else
-            {
-                var folder = await StorageFolder.GetFolderFromPathAsync(transfer.DirectoryName);
-                file = await folder.CreateFileAsync("package.zip");
-            }
-            using var stream = await file.OpenAsync(FileAccessMode.ReadWrite, StorageOpenOptions.AllowReadersAndWriters);
-            using var writer = new DataWriter(stream);
+            server?.Stop();
+        }
 
-            int total = 1, index = 0;
-            while (index < total)
+        public static TcpTouchRpcService StartRecieve(int port, string token, TransferInfo transferInfo)
+        {
+            var folder = DirectoryHelper.GenerateRecieveFolder(transferInfo.deviceName);
+            var transfer = new Transfer()
             {
-                var rec = await socket.ReadAsync();
-                var packInfo = JsonConvert.DeserializeObject<TransferPackageInfo>(rec.info);
-                total = packInfo.Total;
-                index = packInfo.Index;
-                RecieveStatusManager.manager.ReportPack(index, total);
-                index++;
-                writer.WriteBuffer(rec.payload);
-                await writer.StoreAsync();
-                await writer.FlushAsync();
-                GC.Collect();
-                await socket.WriteAsync(new TransferRespond() { Recieve = true });
-            }
+                DirectoryName = folder,
+                StartTime = DateTimeOffset.Now,
+                TransferInfos = transferInfo.TransferInfos,
+                FileInfos = transferInfo.FileInfos,
+                From = transferInfo.deviceName,
+                To = null,
+                TransferDirection = TransferDirection.Recieve
+            };
+
+            RecieveStatusManager.StartNew(transfer);
+            var service = new TouchSocketConfig()
+                .SetListenIPHosts(new IPHost[] { new IPHost(port) })
+                .SetRootPath(DirectoryHelper.GenerateRecieveFolder(transferInfo.deviceName))
+                .UsePlugin()
+                .ConfigurePlugins(a =>
+                {
+                    a.Add<RecievePlugin>();
+                })
+                .SetVerifyToken(token)
+                .BuildWithTcpTouchRpcService();
+            return service;
         }
     }
 }

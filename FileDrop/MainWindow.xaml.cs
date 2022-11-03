@@ -21,7 +21,6 @@ using WinRT;
 using WinRT.Interop;
 using Microsoft.UI.Windowing;
 using FileDrop.Helpers;
-using FileDrop.Helpers.BLE;
 using Microsoft.UI.Dispatching;
 
 // To learn more about WinUI, the WinUI project structure,

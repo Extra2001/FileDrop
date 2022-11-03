@@ -1,22 +1,17 @@
 ﻿using FileDrop.Helpers.Dialog;
 using FileDrop.Helpers.TransferHelper.Reviever;
 using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading.Tasks;
 using Windows.Devices.Enumeration;
 using Windows.Devices.WiFiDirect;
-using Windows.Networking.Sockets;
-using Windows.Security.Cryptography;
-using Windows.Storage.Streams;
 
 namespace FileDrop.Helpers.WiFiDirect.Advertiser
 {
     public class WiFiDirectAdvertiser
     {
-        public static L2ConnectedDevice connectedDevice;
+        public static WiFiDirectDevice connectedDevice;
         private static WiFiDirectAdvertisementPublisher _publisher;
         private static WiFiDirectConnectionListener _listener;
 
@@ -73,20 +68,14 @@ namespace FileDrop.Helpers.WiFiDirect.Advertiser
             {
                 ConnectedStatusManager
                     .ReportProgress($"设备\"{connectionRequest.DeviceInformation.Name}\"正在请求L2连接...");
-                var ReadWrite = await HandleConnectionRequestAsync(connectionRequest);
-                if (ReadWrite == null)
+                var success = await HandleConnectionRequestAsync(connectionRequest);
+                if (!success)
                 {
                     connectionRequest.Dispose();
                 }
-                else
-                {
-                    var task = new RecieveTask();
-                    await task.StartRecieve(ReadWrite);
-                }
             });
         }
-        private static async Task<SocketReaderWriter> HandleConnectionRequestAsync
-           (WiFiDirectConnectionRequest connectionRequest)
+        private static async Task<bool> HandleConnectionRequestAsync(WiFiDirectConnectionRequest connectionRequest)
         {
             bool isPaired = (connectionRequest.DeviceInformation.Pairing?.IsPaired == true) ||
                             (await IsAepPairedAsync(connectionRequest.DeviceInformation.Id));
@@ -96,21 +85,18 @@ namespace FileDrop.Helpers.WiFiDirect.Advertiser
                 if (!await ConnectHelper.RequestPairDeviceAsync(connectionRequest.DeviceInformation.Pairing))
                 {
                     ConnectedStatusManager.ReportError(true, "未配对成功");
-                    return null;
+                    return false;
                 }
             }
 
             if (connectedDevice != null)
             {
-                try
-                {
-                    connectedDevice.Dispose();
-                }
+                try { connectedDevice.Dispose(); }
                 catch { }
                 connectedDevice = null;
             }
 
-            ConnectedStatusManager.ReportProgress("正在接受L2连接");
+            ConnectedStatusManager.ReportProgress("正在接受连接");
             WiFiDirectDevice wfdDevice = null;
             try
             {
@@ -122,23 +108,13 @@ namespace FileDrop.Helpers.WiFiDirect.Advertiser
             catch (Exception ex)
             {
                 ConnectedStatusManager.ReportError(true, "接受连接时出现错误：" + ex.Message);
-                return null;
+                return false;
             }
 
-            // Register for the ConnectionStatusChanged event handler
             wfdDevice.ConnectionStatusChanged += OnConnectionStatusChanged;
-            connectedDevice = new L2ConnectedDevice(wfdDevice);
-            ConnectedStatusManager.ReportProgress("已接受L2连接，等待L4连接请求");
-            var rw = await connectedDevice.EstablishSocket();
-            if (rw != null)
-            {
-                ConnectedStatusManager.ReportProgress("成功建立L4连接");
-            }
-            else
-            {
-                ConnectedStatusManager.ReportError(true, "等待L4连接超时");
-            }
-            return rw;
+            connectedDevice = wfdDevice;
+            ConnectedStatusManager.ReportProgress("已建立L2连接");
+            return true;
         }
         private static async Task<bool> IsAepPairedAsync(string deviceId)
         {

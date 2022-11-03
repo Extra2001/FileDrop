@@ -5,7 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Collections.ObjectModel;
 
-namespace FileDrop.Models
+namespace FileDrop.Models.Database
 {
     public class Transfer
     {

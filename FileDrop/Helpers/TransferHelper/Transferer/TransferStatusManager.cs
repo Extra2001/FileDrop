@@ -1,45 +1,39 @@
 ﻿using FileDrop.Helpers.Dialog;
-using FileDrop.Helpers.TransferHelper.Transferer;
 using FileDrop.Models;
-using FileDrop.Models.Database;
-using Microsoft.UI.Xaml.Media;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
-using TouchSocket.Core;
 using TouchSocket.Core.Run;
+using TouchSocket.Core;
 using TouchSocket.Rpc.TouchRpc;
-using Windows.System;
+using FileDrop.Helpers.TransferHelper.Reciever;
+using FileDrop.Models.Database;
 
-namespace FileDrop.Helpers.TransferHelper.Reciever
+namespace FileDrop.Helpers.TransferHelper.Transferer
 {
-    public class RecieveStatusManager
+    public class TransferStatusManager
     {
-        public static RecieveStatusManager manager { get; private set; }
+        public static TransferStatusManager manager { get; private set; }
         public int status = 1;
         public Transfer transfer;
-        public List<FileOperator> fileOperators = new List<FileOperator>();
+        public List<FileOperator> fileOperators;
 
-        public static RecieveStatusManager StartNew(Transfer transferInfo)
+        public static TransferStatusManager StartNew(Transfer transferInfo, List<FileOperator> fileOperators)
         {
-            manager = new RecieveStatusManager()
+            manager = new TransferStatusManager()
             {
-                transfer = transferInfo
+                transfer = transferInfo,
+                fileOperators = fileOperators
             };
 
-            ModelDialog.ShowWaiting("正在接收文件", $"正在接收{transferInfo.FileInfos.Count}个文件");
+            ModelDialog.ShowWaiting("正在发送文件", $"正在发送{transferInfo.FileInfos.Count}个文件");
 
             LoopAction.CreateLoopAction(-1, 1000, manager.ReportProgressSpeed)
                 .RunAsync();
-            return manager;
-        }
 
-        public void ReportFileOperator(FileOperator fileOperator)
-        {
-            fileOperators.Add(fileOperator);
+            return manager;
         }
 
         public void ReportProgressSpeed(LoopAction loop)
@@ -55,7 +49,7 @@ namespace FileDrop.Helpers.TransferHelper.Reciever
                 progress += item.Progress;
             }
 
-            progress /= transfer.TransferInfos.Count;
+            progress /= fileOperators.Count;
 
             if (finished)
             {
@@ -65,7 +59,7 @@ namespace FileDrop.Helpers.TransferHelper.Reciever
             else
             {
                 ModelDialog.ShowWaiting
-                ("正在接收文件", $"进度：{progress * 100}%，速度：{SpeedParser.Parse(speedSum)}");
+                ("正在发送文件", $"进度：{progress * 100}%，速度：{SpeedParser.Parse(speedSum)}");
             }
         }
 
@@ -74,14 +68,13 @@ namespace FileDrop.Helpers.TransferHelper.Reciever
             transfer.EndTime = DateTimeOffset.Now;
             var collection = Repo.database.GetCollection<Transfer>();
             collection.Insert(transfer);
-            _ = ModelDialog.ShowDialog("接收完成", $"共接收了{transfer.FileInfos.Count}个文件");
-            _ = Launcher.LaunchFolderPathAsync(transfer.DirectoryName);
+            _ = ModelDialog.ShowDialog("发送完成", $"共发送了{transfer.FileInfos.Count}个文件");
             status = 0;
         }
 
-        public void ReportError(string message)
+        public void ReportError(bool fatal, string message)
         {
-            _ = ModelDialog.ShowDialog("接收错误", message);
+            _ = ModelDialog.ShowDialog("发送错误", message);
             status = 2;
         }
     }

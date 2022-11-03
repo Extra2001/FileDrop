@@ -1,6 +1,4 @@
-﻿using FileDrop.Helpers.BLE;
-using FileDrop.Models;
-using Microsoft.UI.Xaml;
+﻿using Microsoft.UI.Xaml;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -21,6 +19,7 @@ using System.Runtime.InteropServices.WindowsRuntime;
 using Windows.Networking;
 using FileDrop.Helpers.Dialog;
 using FileDrop.Helpers.WiFiDirect.Connector;
+using FileDrop.Models;
 
 namespace FileDrop.Helpers.WiFiDirect.Connector
 {
@@ -30,7 +29,7 @@ namespace FileDrop.Helpers.WiFiDirect.Connector
         private static DeviceWatcher _deviceWatcher = null;
         public static ObservableCollection<DiscoveredDevice> discoveredDevices { get; }
             = new ObservableCollection<DiscoveredDevice>();
-        public static L2ConnectDevice connectedDevice;
+        public static WiFiDirectDevice connectedDevice;
         public static ObservableCollection<DeviceContent> deviceContents { get; }
             = new ObservableCollection<DeviceContent>();
 
@@ -208,7 +207,7 @@ namespace FileDrop.Helpers.WiFiDirect.Connector
         }
         #endregion
 
-        public static void ConnectDevice(DeviceInformation deviceInfo, Action<SocketReaderWriter> callback)
+        public static void ConnectDevice(DeviceInformation deviceInfo, Action<WiFiDirectDevice> callback)
         {
             StopWatcher();
             App.mainWindow.DispatcherQueue.TryEnqueue(async () =>
@@ -245,7 +244,8 @@ namespace FileDrop.Helpers.WiFiDirect.Connector
                     callback.Invoke(null);
                     return;
                 }
-                catch (Exception ex) when (ex.HResult == unchecked((int)0x8007001F))
+                catch (Exception ex) 
+                when (ex.HResult == unchecked((int)0x8007001F) || ex.HResult == unchecked((int)0x80070288))
                 {
                     if (retry < 50)
                     {
@@ -267,17 +267,9 @@ namespace FileDrop.Helpers.WiFiDirect.Connector
                 }
 
                 wfdDevice.ConnectionStatusChanged += OnConnectionStatusChanged;
-
-                connectedDevice = new L2ConnectDevice(wfdDevice);
-
-                ConnectStatusManager.ReportProgress("L2连接建立成功，正在建立L4连接");
-
-                var RW = await connectedDevice.EstablishSocket();
-                if (RW != null)
-                {
-                    ConnectStatusManager.ReportProgress("L4连接建立成功");
-                }
-                callback.Invoke(RW);
+                connectedDevice = wfdDevice;
+                ConnectStatusManager.ReportProgress("L2连接建立成功，正在发起传输请求");
+                callback.Invoke(wfdDevice);
             });
         }
         private static void OnConnectionStatusChanged(WiFiDirectDevice sender, object arg)

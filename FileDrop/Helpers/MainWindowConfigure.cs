@@ -14,10 +14,10 @@ using WinRT;
 using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml.Controls;
 using System.IO;
-using FileDrop.Helpers.BLE;
 using FileDrop.Helpers.WiFiDirect;
 using FileDrop.Helpers.WiFiDirect.Advertiser;
 using FileDrop.Helpers.WiFiDirect.Connector;
+using FileDrop.Helpers.TransferHelper.Reviever;
 
 namespace FileDrop.Helpers
 {
@@ -42,6 +42,7 @@ namespace FileDrop.Helpers
             App.mainWindow = mainWindow;
             SetCustomTitleBar(customTitleBar);
             TrySetSystemBackdrop();
+            RecieveTask.WaitForTransfer();
         }
 
         #region 设置应用背景
@@ -177,6 +178,7 @@ namespace FileDrop.Helpers
             if (WiFiDirectAdvertiser.Started)
                 WiFiDirectAdvertiser.StopAdvertisement();
             WiFiDirectConnector.StopWatcher();
+            RecieveTask.StopWaitForTransfer();
         }
 
         private class WindowsSystemDispatcherQueueHelper
