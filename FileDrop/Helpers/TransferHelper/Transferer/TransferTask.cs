@@ -43,12 +43,12 @@ namespace FileDrop.Helpers.TransferHelper.Transferer
                 var respond = JsonConvert.DeserializeObject<TransferRespond>(mes);
                 if (respond.Recieve)
                 {
-                    StartTransfer($"{host.IPInformation}:{respond.Port}", respond.Token, transferInfo);
+                    StartTransfer($"{host.DisplayName}:{respond.Port}", respond.Token, transferInfo);
                 }
             };
 
             TouchSocketConfig config = new TouchSocketConfig();
-            config.SetRemoteIPHost(new IPHost(host.IPInformation.ToString() + ":31826"));
+            config.SetRemoteIPHost(new IPHost(host.DisplayName + ":31826"));
             tcpClient.Setup(config);
             tcpClient.Connect();
         }
