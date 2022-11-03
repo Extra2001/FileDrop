@@ -57,8 +57,9 @@ namespace FileDrop.Helpers.TransferHelper
                         else
                             AddFolder(item.Path, Path.GetDirectoryName(item.Path), zip, transferItems);
                     }
-                    entryCount = zip.Count;
+                    
                     zip.CommitUpdate();
+                    entryCount = zip.Count;
                 }
 
                 if (entryCount > 0)
