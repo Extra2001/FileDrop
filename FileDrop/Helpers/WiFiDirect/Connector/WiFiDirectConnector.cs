@@ -210,6 +210,7 @@ namespace FileDrop.Helpers.WiFiDirect.Connector
 
         public static void ConnectDevice(DeviceInformation deviceInfo, Action<SocketReaderWriter> callback)
         {
+            StopWatcher();
             App.mainWindow.DispatcherQueue.TryEnqueue(async () =>
             {
                 ConnectStatusManager.ReportProgress("开始发起连接");
@@ -273,7 +274,6 @@ namespace FileDrop.Helpers.WiFiDirect.Connector
                 {
                     ConnectStatusManager.ReportProgress("L4连接建立成功");
                 }
-
                 callback.Invoke(RW);
             });
         }

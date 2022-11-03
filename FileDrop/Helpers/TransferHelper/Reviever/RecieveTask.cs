@@ -48,11 +48,13 @@ namespace FileDrop.Helpers.TransferHelper.Reviever
                     TransferDirection = TransferDirection.Recieve
                 };
 
-                for(int i = 0; i < transferInfo.TransferInfos.Count; i++)
+                for (int i = 0; i < transferInfo.TransferInfos.Count; i++)
                 {
                     RecieveStatusManager.manager.ReportTransferItem(i);
                     await RecieveItem(transferInfo.TransferInfos[i]);
                 }
+
+                RestoreFile.RestoreZip(Path.Combine(transfer.DirectoryName, "package.zip"));
 
                 transfer.EndTime = DateTimeOffset.Now;
                 var collection = Repo.database.GetCollection<Transfer>();
@@ -77,15 +79,15 @@ namespace FileDrop.Helpers.TransferHelper.Reviever
                 var name = Path.GetFileName(path);
                 if (!Directory.Exists(dir))
                     Directory.CreateDirectory(dir);
-                var folder = await Windows.Storage.StorageFolder.GetFolderFromPathAsync(dir);
+                var folder = await StorageFolder.GetFolderFromPathAsync(dir);
                 file = await folder.CreateFileAsync(name);
             }
             else
             {
-                var folder = await Windows.Storage.StorageFolder.GetFolderFromPathAsync(transfer.DirectoryName);
+                var folder = await StorageFolder.GetFolderFromPathAsync(transfer.DirectoryName);
                 file = await folder.CreateFileAsync("package.zip");
             }
-            using var stream = await file.OpenAsync(Windows.Storage.FileAccessMode.ReadWrite, Windows.Storage.StorageOpenOptions.AllowReadersAndWriters);
+            using var stream = await file.OpenAsync(FileAccessMode.ReadWrite, StorageOpenOptions.AllowReadersAndWriters);
             using var writer = new DataWriter(stream);
 
             int total = 1, index = 0;
@@ -99,6 +101,8 @@ namespace FileDrop.Helpers.TransferHelper.Reviever
                 index++;
                 writer.WriteBuffer(rec.payload);
                 await writer.StoreAsync();
+                await writer.FlushAsync();
+                GC.Collect();
                 await socket.WriteAsync(new TransferRespond() { Recieve = true });
             }
         }

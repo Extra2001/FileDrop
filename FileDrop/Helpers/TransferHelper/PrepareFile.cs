@@ -1,5 +1,4 @@
 ﻿using FileDrop.Models;
-using ICSharpCode.SharpZipLib.GZip;
 using ICSharpCode.SharpZipLib.Zip;
 using Microsoft.UI.Xaml.Controls;
 using System;
@@ -46,6 +45,7 @@ namespace FileDrop.Helpers.TransferHelper
                 var zipPath = Path.Combine(local, "package.zip");
                 if (File.Exists(zipPath)) File.Delete(zipPath);
 
+                long entryCount;
                 using (ZipFile zip = ZipFile.Create(zipPath))
                 {
                     zip.BeginUpdate();
@@ -57,17 +57,20 @@ namespace FileDrop.Helpers.TransferHelper
                         else
                             AddFolder(item.Path, Path.GetDirectoryName(item.Path), zip, transferItems);
                     }
-
+                    entryCount = zip.Count;
                     zip.CommitUpdate();
                 }
 
-                transferItems.Add(new TransferItem()
+                if (entryCount > 0)
                 {
-                    Id = GetId(transferItems),
-                    InPackagePath = "",
-                    TransferType = TransferType.Zip,
-                    Path = zipPath
-                });
+                    transferItems.Add(new TransferItem()
+                    {
+                        Id = GetId(transferItems),
+                        InPackagePath = "",
+                        TransferType = TransferType.Zip,
+                        Path = zipPath
+                    });
+                }
 
                 return transferItems;
             });
