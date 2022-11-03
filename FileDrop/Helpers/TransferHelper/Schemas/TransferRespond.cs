@@ -4,9 +4,9 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace FileDrop.Models
+namespace FileDrop.Helpers.TransferHelper.Schemas
 {
-    public class TransferStartRespond
+    public class TransferRespond
     {
         public bool Recieve { get; set; }
     }

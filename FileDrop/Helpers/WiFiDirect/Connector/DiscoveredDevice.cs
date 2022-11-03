@@ -6,7 +6,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Windows.Devices.Enumeration;
 
-namespace FileDrop.Helpers.WiFiDirect
+namespace FileDrop.Helpers.WiFiDirect.Connector
 {
     public class DiscoveredDevice : INotifyPropertyChanged
     {

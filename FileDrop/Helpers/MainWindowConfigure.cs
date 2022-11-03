@@ -16,6 +16,8 @@ using Microsoft.UI.Xaml.Controls;
 using System.IO;
 using FileDrop.Helpers.BLE;
 using FileDrop.Helpers.WiFiDirect;
+using FileDrop.Helpers.WiFiDirect.Advertiser;
+using FileDrop.Helpers.WiFiDirect.Connector;
 
 namespace FileDrop.Helpers
 {

@@ -1,7 +1,11 @@
 ﻿using FileDrop.Helpers;
 using FileDrop.Helpers.BLE;
 using FileDrop.Helpers.Dialog;
+using FileDrop.Helpers.TransferHelper;
+using FileDrop.Helpers.TransferHelper.Schemas;
+using FileDrop.Helpers.TransferHelper.Tranferer;
 using FileDrop.Helpers.WiFiDirect;
+using FileDrop.Helpers.WiFiDirect.Connector;
 using FileDrop.Models;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
@@ -219,14 +223,13 @@ namespace FileDrop.Pages
                 return;
             }
             var dc = WiFiDirectConnector.deviceContents.Where(x => x.Id == apv.Id).FirstOrDefault();
-            WiFiDirectConnector.ConnectDevice(dc.deviceInfo, async success =>
+
+            WiFiDirectConnector.ConnectDevice(dc.deviceInfo, async RW =>
             {
-                if (success)
+                if (RW != null)
                 {
-                    var RW = await WiFiDirectConnector.connectedDevice.EstablishSocket();
-                    await RW.WriteAsync(info);
-                    ModelDialog.ShowWaiting("请稍后", "正在等待对方回应...");
-                    RW.StartRead(SocketRead.SendRead, SocketRead.OnError);
+                    var task = new TransferTask();
+                    await task.StartTransfer(RW, info);
                 }
             });
         }

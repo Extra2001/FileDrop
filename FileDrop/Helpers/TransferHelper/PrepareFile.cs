@@ -12,12 +12,12 @@ using Windows.Storage;
 using Windows.System;
 using Windows.UI.Xaml;
 
-namespace FileDrop.Helpers
+namespace FileDrop.Helpers.TransferHelper
 {
     public static class PrepareFile
     {
         public static long FileLengthThreshold = 10240;
-        
+
         public static async Task<TransferInfo> Prepare(IEnumerable<ToSendFile> files)
         {
             List<TransferFile> transferFiles = new List<TransferFile>();
@@ -38,7 +38,7 @@ namespace FileDrop.Helpers
             return await Task.Run(() =>
             {
                 List<TransferItem> transferItems = new List<TransferItem>();
-                
+
                 var local = ApplicationData.Current.TemporaryFolder.Path;
                 if (!Directory.Exists(local))
                     Directory.CreateDirectory(local);
@@ -57,7 +57,7 @@ namespace FileDrop.Helpers
                         else
                             AddFolder(item.Path, Path.GetDirectoryName(item.Path), zip, transferItems);
                     }
-                    
+
                     zip.CommitUpdate();
                 }
 
@@ -68,7 +68,7 @@ namespace FileDrop.Helpers
                     TransferType = TransferType.Zip,
                     Path = zipPath
                 });
-                
+
                 return transferItems;
             });
         }

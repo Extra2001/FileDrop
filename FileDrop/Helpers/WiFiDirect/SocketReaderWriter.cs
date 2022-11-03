@@ -33,14 +33,12 @@ namespace FileDrop.Helpers.WiFiDirect
 
             _streamSocket = socket;
         }
-
         public void Dispose()
         {
             _dataReader.Dispose();
             _dataWriter.Dispose();
             _streamSocket.Dispose();
         }
-
         public async Task WriteAsync(object obj, IBuffer payload = null)
         {
             ModelDialog.ShowWaiting("请稍后", "正在请求发送...");
@@ -58,7 +56,6 @@ namespace FileDrop.Helpers.WiFiDirect
             catch (Exception)
             { }
         }
-
         public async Task WriteAsync(string info, IBuffer payload = null)
         {
             try
@@ -74,10 +71,8 @@ namespace FileDrop.Helpers.WiFiDirect
             catch (Exception)
             { }
         }
-
         public async Task<SocketRead> ReadAsync()
         {
-
             uint bytesRead = await _dataReader.LoadAsync(sizeof(uint));
             if (bytesRead > 0)
             {
@@ -117,25 +112,24 @@ namespace FileDrop.Helpers.WiFiDirect
 
             return null;
         }
-
-        public async void StartRead(Action<SocketRead> action, Action<Exception> onError)
+        public async Task<SocketRead> ReadWithRetryAsync(int timeout)
         {
-            try
+            int retry = 0;
+            while (retry <= 10 * timeout)
             {
-                SocketRead read;
-                while (true)
+                var read = await ReadAsync();
+                if (read == null)
                 {
-                    read = await ReadAsync();
-                    if (read == null) continue;
-                    action(read);
+                    retry++;
+                    await Task.Delay(100);
+                }
+                else
+                {
+                    return read;
                 }
             }
-            catch (Exception ex)
-            {
-                onError.Invoke(ex);
-            }
+            return null;
         }
-
         public class SocketRead
         {
             public string info;

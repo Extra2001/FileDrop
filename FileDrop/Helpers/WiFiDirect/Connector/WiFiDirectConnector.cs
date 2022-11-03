@@ -20,16 +20,17 @@ using System.IO;
 using System.Runtime.InteropServices.WindowsRuntime;
 using Windows.Networking;
 using FileDrop.Helpers.Dialog;
+using FileDrop.Helpers.WiFiDirect.Connector;
 
-namespace FileDrop.Helpers.WiFiDirect
+namespace FileDrop.Helpers.WiFiDirect.Connector
 {
     public class WiFiDirectConnector
     {
-        private static DeviceWatcher _deviceWatcher = null;
         private static WiFiDirectAdvertisementPublisher _publisher = new WiFiDirectAdvertisementPublisher();
-        public static ObservableCollection<DiscoveredDevice> DiscoveredDevices { get; }
+        private static DeviceWatcher _deviceWatcher = null;
+        public static ObservableCollection<DiscoveredDevice> discoveredDevices { get; }
             = new ObservableCollection<DiscoveredDevice>();
-        public static ConnectedDevice connectedDevice;
+        public static L2ConnectDevice connectedDevice;
         public static ObservableCollection<DeviceContent> deviceContents { get; }
             = new ObservableCollection<DeviceContent>();
 
@@ -40,17 +41,20 @@ namespace FileDrop.Helpers.WiFiDirect
         public static event _EnumerateStarted ScanStart;
         #endregion
 
+        #region 对外暴露接口
         public static void StartWatcher()
         {
+            // 启动publisher
+            StopWatcher();
             if (_publisher.Status != WiFiDirectAdvertisementPublisherStatus.Started)
                 _publisher.Start();
             if (_publisher.Status != WiFiDirectAdvertisementPublisherStatus.Started)
                 return;
-            DiscoveredDevices.Clear();
+
+            discoveredDevices.Clear();
             deviceContents.Clear();
 
             string deviceSelector = WiFiDirectDevice.GetDeviceSelector(WiFiDirectDeviceSelectorType.AssociationEndpoint);
-
             _deviceWatcher = DeviceInformation.CreateWatcher(deviceSelector, new string[] { "System.Devices.WiFiDirect.InformationElements" });
 
             _deviceWatcher.Added += OnDeviceAdded;
@@ -62,7 +66,6 @@ namespace FileDrop.Helpers.WiFiDirect
             _deviceWatcher.Start();
             ScanStart?.Invoke();
         }
-
         public static void StopWatcher()
         {
             if (_publisher.Status == WiFiDirectAdvertisementPublisherStatus.Started)
@@ -82,20 +85,21 @@ namespace FileDrop.Helpers.WiFiDirect
             }
             _deviceWatcher = null;
         }
+        #endregion
 
         #region DeviceWatcherEvents
         private static void OnDeviceAdded(DeviceWatcher deviceWatcher, DeviceInformation deviceInfo)
         {
-            DiscoveredDevices.Add(new DiscoveredDevice(deviceInfo));
+            discoveredDevices.Add(new DiscoveredDevice(deviceInfo));
             IsSupported(deviceInfo);
         }
         private static void OnDeviceRemoved(DeviceWatcher deviceWatcher, DeviceInformationUpdate deviceInfoUpdate)
         {
-            foreach (DiscoveredDevice discoveredDevice in DiscoveredDevices)
+            foreach (DiscoveredDevice discoveredDevice in discoveredDevices)
             {
                 if (discoveredDevice.DeviceInfo.Id == deviceInfoUpdate.Id)
                 {
-                    DiscoveredDevices.Remove(discoveredDevice);
+                    discoveredDevices.Remove(discoveredDevice);
                     UpdateDeviceContents(discoveredDevice.DeviceInfo, null);
                     break;
                 }
@@ -103,7 +107,7 @@ namespace FileDrop.Helpers.WiFiDirect
         }
         private static void OnDeviceUpdated(DeviceWatcher deviceWatcher, DeviceInformationUpdate deviceInfoUpdate)
         {
-            foreach (DiscoveredDevice discoveredDevice in DiscoveredDevices)
+            foreach (DiscoveredDevice discoveredDevice in discoveredDevices)
             {
                 if (discoveredDevice.DeviceInfo.Id == deviceInfoUpdate.Id)
                 {
@@ -122,77 +126,8 @@ namespace FileDrop.Helpers.WiFiDirect
             ScanComplete?.Invoke();
         }
         #endregion
-        public static void ConnectDevice(DeviceInformation deviceInfo, Action<bool> callback)
-        {
-            App.mainWindow.DispatcherQueue.TryEnqueue(async () =>
-            {
-                ModelDialog.ShowWaiting("请稍后", "正在连接设备...");
 
-                if (connectedDevice != null)
-                {
-                    try { connectedDevice.Dispose(); } catch { }
-                }
-                if (!deviceInfo.Pairing.IsPaired)
-                {
-                    if (!await ConnectHelper.RequestPairDeviceAsync(deviceInfo.Pairing))
-                    {
-                        callback.Invoke(false);
-                        return;
-                    }
-                }
-                int retry = 0;
-                WiFiDirectDevice wfdDevice = null;
-                tryConnect:
-                try
-                {
-                    // IMPORTANT: FromIdAsync needs to be called from the UI thread
-                    wfdDevice = await WiFiDirectDevice.FromIdAsync(deviceInfo.Id);
-                }
-                catch (TaskCanceledException)
-                {
-                    _ = ModelDialog.ShowDialog("提示", "发送已被取消");
-                    StopWatcher();
-                    StartWatcher();
-                    callback.Invoke(false);
-                    return;
-                }
-                catch (Exception ex) when (ex.HResult == unchecked((int)0x8007001F))
-                {
-                    if (retry < 50)
-                    {
-                        retry++;
-                        goto tryConnect;
-                    }
-                    else
-                    {
-                        _ = ModelDialog.ShowDialog("提示", "发送异常" + ex.Message);
-                        StopWatcher();
-                        StartWatcher();
-                        callback.Invoke(false);
-                        return;
-                    }
-                }
-                catch (Exception ex)
-                {
-                    _ = ModelDialog.ShowDialog("提示", "发送异常" + ex.Message);
-                    StopWatcher();
-                    StartWatcher();
-                    callback.Invoke(false);
-                    return;
-                }
-
-                // Register for the ConnectionStatusChanged event handler
-                wfdDevice.ConnectionStatusChanged += OnConnectionStatusChanged;
-
-                connectedDevice = new ConnectedDevice(wfdDevice, true);
-                callback.Invoke(true);
-            });
-        }
-
-        private static void OnConnectionStatusChanged(WiFiDirectDevice sender, object arg)
-        {
-
-        }
+        #region 设备筛选
         private static bool IsSupported(DeviceInformation deviceInfo)
         {
             IList<WiFiDirectInformationElement> informationElements = null;
@@ -200,10 +135,7 @@ namespace FileDrop.Helpers.WiFiDirect
             {
                 informationElements = WiFiDirectInformationElement.CreateFromDeviceInformation(deviceInfo);
             }
-            catch (Exception)
-            {
-                
-            }
+            catch (Exception) { }
 
             if (informationElements != null)
             {
@@ -228,7 +160,7 @@ namespace FileDrop.Helpers.WiFiDirect
                                 return UpdateDeviceContents(deviceInfo, null);
                             }
                         }
-                        else if(informationElement.OuiType == ConnectDefinition.DeviceNameOuiType)
+                        else if (informationElement.OuiType == ConnectDefinition.DeviceNameOuiType)
                         {
                             try
                             {
@@ -273,6 +205,81 @@ namespace FileDrop.Helpers.WiFiDirect
             }
 
             return true;
+        }
+        #endregion
+
+        public static void ConnectDevice(DeviceInformation deviceInfo, Action<SocketReaderWriter> callback)
+        {
+            App.mainWindow.DispatcherQueue.TryEnqueue(async () =>
+            {
+                ConnectStatusManager.ReportProgress("开始发起连接");
+
+                if (connectedDevice != null)
+                {
+                    try { connectedDevice.Dispose(); } catch { }
+                }
+                if (!deviceInfo.Pairing.IsPaired)
+                {
+                    if (!await ConnectHelper.RequestPairDeviceAsync(deviceInfo.Pairing))
+                    {
+                        ConnectStatusManager.ReportError(true, "尝试配对失败");
+                        callback.Invoke(null);
+                        return;
+                    }
+                }
+
+                int retry = 0;
+                WiFiDirectDevice wfdDevice = null;
+                tryConnect:
+                try
+                {
+                    wfdDevice = await WiFiDirectDevice.FromIdAsync(deviceInfo.Id);
+                }
+                catch (TaskCanceledException)
+                {
+                    ConnectStatusManager.ReportError(true, "发送已被取消");
+                    callback.Invoke(null);
+                    return;
+                }
+                catch (Exception ex) when (ex.HResult == unchecked((int)0x8007001F))
+                {
+                    if (retry < 50)
+                    {
+                        retry++;
+                        goto tryConnect;
+                    }
+                    else
+                    {
+                        ConnectStatusManager.ReportError(true, "创建L2连接时发生异常：" + ex.Message);
+                        callback.Invoke(null);
+                        return;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    ConnectStatusManager.ReportError(true, "创建L2连接时发生异常：" + ex.Message);
+                    callback.Invoke(null);
+                    return;
+                }
+
+                wfdDevice.ConnectionStatusChanged += OnConnectionStatusChanged;
+
+                connectedDevice = new L2ConnectDevice(wfdDevice);
+
+                ConnectStatusManager.ReportProgress("L2连接建立成功，正在建立L4连接");
+
+                var RW = await connectedDevice.EstablishSocket();
+                if (RW != null)
+                {
+                    ConnectStatusManager.ReportProgress("L4连接建立成功");
+                }
+
+                callback.Invoke(RW);
+            });
+        }
+        private static void OnConnectionStatusChanged(WiFiDirectDevice sender, object arg)
+        {
+
         }
     }
 }

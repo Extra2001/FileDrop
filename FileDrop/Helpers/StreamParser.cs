@@ -11,15 +11,6 @@ namespace FileDrop.Helpers
 {
     public static class StreamParser
     {
-        public static DataWriter GetAppInfoWriter()
-        {
-            var app = new AppInfo()
-            {
-                DeviceName = SettingsItem.GetSettings().LocalName
-            };
-            return GetWriter(app);
-        }
-
         public static DataWriter GetWriter(string str)
         {
             var writer = new DataWriter();
@@ -27,7 +18,6 @@ namespace FileDrop.Helpers
             writer.WriteBytes(Encoding.UTF8.GetBytes(str));
             return writer;
         }
-
         public static DataWriter GetWriter(object obj)
         {
             var writer = new DataWriter();
@@ -36,12 +26,10 @@ namespace FileDrop.Helpers
             writer.WriteBytes(Encoding.UTF8.GetBytes(str));
             return writer;
         }
-
         public static T Parse<T>(this IBuffer buffer)
         {
             return JsonConvert.DeserializeObject<T>(buffer.Parse());
         }
-
         public static string Parse(this IBuffer buffer)
         {
             byte[] bytes = new byte[buffer.Length];

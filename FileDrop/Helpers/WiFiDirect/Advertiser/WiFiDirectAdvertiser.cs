@@ -1,4 +1,5 @@
 ﻿using FileDrop.Helpers.Dialog;
+using FileDrop.Helpers.TransferHelper.Reviever;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -11,16 +12,17 @@ using Windows.Networking.Sockets;
 using Windows.Security.Cryptography;
 using Windows.Storage.Streams;
 
-namespace FileDrop.Helpers.WiFiDirect
+namespace FileDrop.Helpers.WiFiDirect.Advertiser
 {
     public class WiFiDirectAdvertiser
     {
-        public static ConnectedDevice connectedDevice;
+        public static L2ConnectedDevice connectedDevice;
         private static WiFiDirectAdvertisementPublisher _publisher;
         private static WiFiDirectConnectionListener _listener;
 
         public static bool Started => _publisher != null && _publisher.Status == WiFiDirectAdvertisementPublisherStatus.Started;
 
+        #region 对外暴露接口
         public static void StartAdvertisement()
         {
             if (!Started)
@@ -49,7 +51,6 @@ namespace FileDrop.Helpers.WiFiDirect
                 _ = ModelDialog.ShowDialog("开启广播失败", "您将无法正常使用功能", "确定");
             }
         }
-
         public static void StopAdvertisement()
         {
             if (Started)
@@ -60,6 +61,81 @@ namespace FileDrop.Helpers.WiFiDirect
             _listener.ConnectionRequested -= OnConnectionRequested;
             connectedDevice?.Dispose();
             connectedDevice = null;
+        }
+        #endregion
+
+        private static void OnConnectionRequested(WiFiDirectConnectionListener sender, WiFiDirectConnectionRequestedEventArgs connectionEventArgs)
+        {
+            ConnectedStatusManager.ReportProgress("有设备正在请求L2连接");
+            WiFiDirectConnectionRequest connectionRequest = connectionEventArgs.GetConnectionRequest();
+
+            App.mainWindow.DispatcherQueue.TryEnqueue(async () =>
+            {
+                ConnectedStatusManager
+                    .ReportProgress($"设备\"{connectionRequest.DeviceInformation.Name}\"正在请求L2连接...");
+                var ReadWrite = await HandleConnectionRequestAsync(connectionRequest);
+                if (ReadWrite == null)
+                {
+                    connectionRequest.Dispose();
+                }
+                else
+                {
+                    var task = new RecieveTask();
+                    await task.StartRecieve(ReadWrite);
+                }
+            });
+        }
+        private static async Task<SocketReaderWriter> HandleConnectionRequestAsync
+           (WiFiDirectConnectionRequest connectionRequest)
+        {
+            bool isPaired = (connectionRequest.DeviceInformation.Pairing?.IsPaired == true) ||
+                            (await IsAepPairedAsync(connectionRequest.DeviceInformation.Id));
+
+            if (!isPaired && !_publisher.Advertisement.LegacySettings.IsEnabled)
+            {
+                if (!await ConnectHelper.RequestPairDeviceAsync(connectionRequest.DeviceInformation.Pairing))
+                {
+                    ConnectedStatusManager.ReportError(true, "未配对成功");
+                    return null;
+                }
+            }
+
+            if (connectedDevice != null)
+            {
+                try
+                {
+                    connectedDevice.Dispose();
+                }
+                catch { }
+                connectedDevice = null;
+            }
+
+            ConnectedStatusManager.ReportProgress("正在接受L2连接");
+            WiFiDirectDevice wfdDevice = null;
+            try
+            {
+                wfdDevice = await WiFiDirectDevice.FromIdAsync(connectionRequest.DeviceInformation.Id);
+            }
+            catch (Exception ex)
+            {
+                ConnectedStatusManager.ReportError(true, "接受连接时出现错误" + ex.Message);
+                return null;
+            }
+
+            // Register for the ConnectionStatusChanged event handler
+            wfdDevice.ConnectionStatusChanged += OnConnectionStatusChanged;
+            connectedDevice = new L2ConnectedDevice(wfdDevice);
+            ConnectedStatusManager.ReportProgress("已接受L2连接，等待L4连接请求");
+            var rw = await connectedDevice.EstablishSocket();
+            if (rw != null)
+            {
+                ConnectedStatusManager.ReportProgress("成功建立L4连接");
+            }
+            else
+            {
+                ConnectedStatusManager.ReportError(true, "等待L4连接超时");
+            }
+            return rw;
         }
         private static async Task<bool> IsAepPairedAsync(string deviceId)
         {
@@ -84,71 +160,6 @@ namespace FileDrop.Helpers.WiFiDirect
             var deviceSelector = $"System.Devices.Aep.DeviceAddress:=\"{devInfo.Properties["System.Devices.Aep.DeviceAddress"]}\"";
             DeviceInformationCollection pairedDeviceCollection = await DeviceInformation.FindAllAsync(deviceSelector, null, DeviceInformationKind.Device);
             return pairedDeviceCollection.Count > 0;
-        }
-
-        private static void OnConnectionRequested(WiFiDirectConnectionListener sender, WiFiDirectConnectionRequestedEventArgs connectionEventArgs)
-        {
-            ModelDialog.ShowWaiting("请稍后", $"设备正在请求L2连接...");
-            WiFiDirectConnectionRequest connectionRequest = connectionEventArgs.GetConnectionRequest();
-            ModelDialog.ShowWaiting
-                ("请稍后", $"设备\"{connectionRequest.DeviceInformation.Name}\"正在请求L2连接...");
-
-            App.mainWindow.DispatcherQueue.TryEnqueue(async () =>
-            {
-                bool success = await HandleConnectionRequestAsync(connectionRequest);
-                if (!success)
-                    connectionRequest.Dispose();
-            });
-        }
-        private static async Task<bool> HandleConnectionRequestAsync
-           (WiFiDirectConnectionRequest connectionRequest)
-        {
-            bool isPaired = (connectionRequest.DeviceInformation.Pairing?.IsPaired == true) ||
-                            (await IsAepPairedAsync(connectionRequest.DeviceInformation.Id));
-
-            // Pair device if not already paired and not using legacy settings
-            if (!isPaired && !_publisher.Advertisement.LegacySettings.IsEnabled)
-            {
-                if (!await ConnectHelper.RequestPairDeviceAsync(connectionRequest.DeviceInformation.Pairing))
-                {
-                    return false;
-                }
-            }
-
-            if (connectedDevice != null)
-            {
-                try
-                {
-                    connectedDevice.Dispose();
-                }
-                catch { }
-                connectedDevice = null;
-            }
-
-            WiFiDirectDevice wfdDevice = null;
-            try
-            {
-                wfdDevice = await WiFiDirectDevice.FromIdAsync(connectionRequest.DeviceInformation.Id);
-            }
-            catch (Exception ex)
-            {
-                _ = ModelDialog.ShowDialog("错误", $"连接失败{ex.Message}");
-                StopAdvertisement();
-                StartAdvertisement();
-                return false;
-            }
-
-            // Register for the ConnectionStatusChanged event handler
-            wfdDevice.ConnectionStatusChanged += OnConnectionStatusChanged;
-            connectedDevice = new ConnectedDevice(wfdDevice, false);
-            connectedDevice.RecievedSocketConnection += ConnectedDevice_RecievedSocketConnection;
-            ModelDialog.ShowWaiting("请稍后", $"已建立L2连接，等待L4连接请求...");
-            return true;
-        }
-        private static void ConnectedDevice_RecievedSocketConnection(ConnectedDevice device, SocketReaderWriter socket)
-        {
-            ModelDialog.ShowWaiting("请稍后", $"已建立L4连接，等待对方发送传输请求...");
-            socket.StartRead(SocketRead.RecieveRead, SocketRead.OnError);
         }
         private static void OnStatusChanged(WiFiDirectAdvertisementPublisher sender, WiFiDirectAdvertisementPublisherStatusChangedEventArgs statusEventArgs)
         {

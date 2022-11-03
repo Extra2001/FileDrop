@@ -1,5 +1,7 @@
-﻿using System;
+﻿using FileDrop.Models;
+using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
@@ -18,6 +20,23 @@ namespace FileDrop.Helpers
             string downloads;
             SHGetKnownFolderPath(new Guid("374DE290-123F-4565-9164-39C4925E467B"), 0, IntPtr.Zero, out downloads);
             return downloads;
+        }
+
+        public static string GetRecievePath()
+        {
+            var settings = SettingsItem.GetSettings();
+            if (settings.RecieveFolder == RecieveFolder.Downloads)
+                return GetDownloadsPath();
+            return settings.RecievePath;
+        }
+
+        public static string GenerateRecieveFolder(string deviceName)
+        {
+            var path = GetRecievePath();
+            var name = deviceName + "_" + DateTime.Now.ToString("s");
+            var folder = Path.Combine(path, name);
+            Directory.CreateDirectory(folder);
+            return folder;
         }
     }
 }
