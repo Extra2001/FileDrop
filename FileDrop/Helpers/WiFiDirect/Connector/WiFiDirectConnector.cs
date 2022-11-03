@@ -234,7 +234,10 @@ namespace FileDrop.Helpers.WiFiDirect.Connector
                 tryConnect:
                 try
                 {
-                    wfdDevice = await WiFiDirectDevice.FromIdAsync(deviceInfo.Id);
+                    var para = new WiFiDirectConnectionParameters();
+                    para.PreferredPairingProcedure = WiFiDirectPairingProcedure.Invitation;
+                    para.PreferenceOrderedConfigurationMethods.Add(WiFiDirectConfigurationMethod.PushButton);
+                    wfdDevice = await WiFiDirectDevice.FromIdAsync(deviceInfo.Id, para);
                 }
                 catch (TaskCanceledException)
                 {

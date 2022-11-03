@@ -114,11 +114,14 @@ namespace FileDrop.Helpers.WiFiDirect.Advertiser
             WiFiDirectDevice wfdDevice = null;
             try
             {
-                wfdDevice = await WiFiDirectDevice.FromIdAsync(connectionRequest.DeviceInformation.Id);
+                var para = new WiFiDirectConnectionParameters();
+                para.PreferredPairingProcedure = WiFiDirectPairingProcedure.Invitation;
+                para.PreferenceOrderedConfigurationMethods.Add(WiFiDirectConfigurationMethod.PushButton);
+                wfdDevice = await WiFiDirectDevice.FromIdAsync(connectionRequest.DeviceInformation.Id, para);
             }
             catch (Exception ex)
             {
-                ConnectedStatusManager.ReportError(true, "接受连接时出现错误" + ex.Message);
+                ConnectedStatusManager.ReportError(true, "接受连接时出现错误：" + ex.Message);
                 return null;
             }
 

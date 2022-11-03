@@ -12,9 +12,12 @@ namespace FileDrop.Helpers.TransferHelper
     {
         public static void RestoreZip(string path)
         {
-            new FastZip().ExtractZip(path, Path.GetDirectoryName(path),
-                FastZip.Overwrite.Always, null, null, null, true);
-            File.Delete(path);
+            if (File.Exists(path))
+            {
+                new FastZip().ExtractZip(path, Path.GetDirectoryName(path),
+                    FastZip.Overwrite.Always, null, null, null, true);
+                File.Delete(path);
+            }
         }
     }
 }
