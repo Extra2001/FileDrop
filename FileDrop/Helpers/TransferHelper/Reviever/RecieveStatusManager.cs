@@ -24,7 +24,7 @@ namespace FileDrop.Helpers.TransferHelper.Reciever
         public static RecieveStatusManager manager { get; private set; }
         public int status = 1;
         public Transfer transfer;
-        public List<DownloadProgress> downloaders;
+        public List<DownloadProgress> downloaders = new List<DownloadProgress>();
 
         public static RecieveStatusManager StartNew(Transfer transferInfo, List<DownloadService> downloaders)
         {
@@ -42,7 +42,7 @@ namespace FileDrop.Helpers.TransferHelper.Reciever
                 manager.downloaders.Add(new DownloadProgress(item));
             }
 
-            LoopAction.CreateLoopAction(-1, 1000, manager.ReportProgress);
+            LoopAction.CreateLoopAction(-1, 1000, manager.ReportProgress).RunAsync();
             return manager;
         }
         private void Item_DownloadProgressChanged(object sender, DownloadProgressChangedEventArgs e)
