@@ -134,8 +134,12 @@ namespace FileDrop.Pages
             WiFiDirectAdvertiser.StopAdvertisement();
             await Task.Delay(50);
             await NetworkHelper.ResetWiFiAdapter();
-            await Task.Delay(300);
-            WiFiDirectAdvertiser.StartAdvertisement();
+            await Task.Delay(3000);
+            App.mainWindow.DispatcherQueue.TryEnqueue(() =>
+            {
+                WiFiDirectAdvertiser.StopAdvertisement();
+                WiFiDirectAdvertiser.StartAdvertisement();
+            });
         }
     }
 }

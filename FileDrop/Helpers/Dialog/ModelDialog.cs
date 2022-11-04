@@ -26,6 +26,10 @@ namespace FileDrop.Helpers.Dialog
             dialog.CloseButtonText = closeButton;
             dialog.DefaultButton = ContentDialogButton.Primary;
             dialog.Content = content;
+            showedDialogs = new ShowedDialog()
+            {
+                dialog = dialog
+            };
             return await dialog.ShowAsync();
         }
 

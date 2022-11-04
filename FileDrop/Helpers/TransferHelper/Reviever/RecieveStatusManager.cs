@@ -57,7 +57,7 @@ namespace FileDrop.Helpers.TransferHelper.Reciever
 
             progress /= transfer.TransferInfos.Count;
 
-            if (finished)
+            if ((finished && fileOperators.Count != 0) || status == 0)
             {
                 ReportDone();
                 loop.Dispose();
@@ -71,12 +71,12 @@ namespace FileDrop.Helpers.TransferHelper.Reciever
 
         public void ReportDone()
         {
+            status = 0;
             transfer.EndTime = DateTimeOffset.Now;
             var collection = Repo.database.GetCollection<Transfer>();
             collection.Insert(transfer);
             _ = ModelDialog.ShowDialog("接收完成", $"共接收了{transfer.FileInfos.Count}个文件");
             _ = Launcher.LaunchFolderPathAsync(transfer.DirectoryName);
-            status = 0;
         }
 
         public void ReportError(string message)

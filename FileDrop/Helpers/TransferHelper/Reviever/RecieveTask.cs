@@ -25,9 +25,13 @@ namespace FileDrop.Helpers.TransferHelper.Reviever
         public static void WaitForTransfer(HostName localHostName)
         {
             NetworkHelper.SetNetworkProfileToPrivate();
-            if (server != null)
+            if (server == null)
             {
                 server = new TcpService();
+                server.Connecting += (o, e) =>
+                {
+
+                };
                 server.Connected += (o, e) =>
                 {
 
@@ -43,13 +47,16 @@ namespace FileDrop.Helpers.TransferHelper.Reviever
 
                         if (dres == ContentDialogResult.Primary)
                         {
+                            int port = NetworkHelper.GetRandomPort();
+                            string token = Guid.NewGuid().ToString();
                             var respond = new TransferRespond()
                             {
                                 Recieve = true,
-                                Port = NetworkHelper.GetRandomPort(),
-                                Token = Guid.NewGuid().ToString()
+                                Port = port,
+                                Token = token
                             };
                             server.SendAsync(client.ID, JsonConvert.SerializeObject(respond));
+                            StartRecieve(port, token, transferInfo);
                         }
                         else
                         {
@@ -86,7 +93,7 @@ namespace FileDrop.Helpers.TransferHelper.Reviever
             RecieveStatusManager.StartNew(transfer);
             var service = new TouchSocketConfig()
                 .SetListenIPHosts(new IPHost[] { new IPHost(port) })
-                .SetRootPath(DirectoryHelper.GenerateRecieveFolder(transferInfo.deviceName))
+                .SetRootPath(folder)
                 .UsePlugin()
                 .ConfigurePlugins(a =>
                 {
