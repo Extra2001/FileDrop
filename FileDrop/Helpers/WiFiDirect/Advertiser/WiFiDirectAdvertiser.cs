@@ -120,7 +120,7 @@ namespace FileDrop.Helpers.WiFiDirect.Advertiser
             wfdDevice.ConnectionStatusChanged += OnConnectionStatusChanged;
             connectedDevice = wfdDevice;
             ConnectedStatusManager.ReportProgress("已建立L2连接，正在等待L4连接请求");
-            RecieveTask.WaitForTransfer(wfdDevice.GetConnectionEndpointPairs()[0].LocalHostName);
+            RecieveTask.WaitForTransfer(wfdDevice.GetConnectionEndpointPairs()[0]);
             return true;
         }
         private static async Task<bool> IsAepPairedAsync(string deviceId)

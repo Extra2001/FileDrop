@@ -26,7 +26,7 @@ namespace FileDrop.Helpers.TransferHelper.Reviever
     public static class RecieveTask
     {
         private static TcpService server = null;
-        public static void WaitForTransfer(HostName localHostName, HostName remoteHostName)
+        public static void WaitForTransfer(EndpointPair endpointPair)
         {
             NetworkHelper.SetNetworkProfileToPrivate();
             if (server == null)
@@ -60,7 +60,8 @@ namespace FileDrop.Helpers.TransferHelper.Reviever
                                 Token = token
                             };
                             server.SendAsync(client.ID, JsonConvert.SerializeObject(respond));
-                            _ = StartRecieve(remoteHostName.DisplayName + ":" + port, token, transferInfo);
+                            _ = StartRecieve
+                                (endpointPair.RemoteHostName.DisplayName + ":" + port, token, transferInfo);
                         }
                         else
                         {
@@ -70,7 +71,8 @@ namespace FileDrop.Helpers.TransferHelper.Reviever
                     });
                 };
                 server.Setup(new TouchSocketConfig()
-                    .SetListenIPHosts(new IPHost[] { new IPHost(localHostName.DisplayName + ":" + 31826) }))
+                    .SetListenIPHosts(new IPHost[] {
+                        new IPHost(endpointPair.LocalHostName.DisplayName + ":" + 31826) }))
                     .Start();
             }
         }

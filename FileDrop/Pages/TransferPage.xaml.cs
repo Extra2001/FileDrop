@@ -235,7 +235,7 @@ namespace FileDrop.Pages
                 if (wfdDevice != null)
                 {
                     TransferTask.RequestTransfer(wfdDevice.
-                        GetConnectionEndpointPairs()[0].RemoteHostName, info);
+                        GetConnectionEndpointPairs()[0], info);
                 }
             });
         }

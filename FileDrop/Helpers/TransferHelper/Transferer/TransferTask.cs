@@ -30,7 +30,7 @@ namespace FileDrop.Helpers.TransferHelper.Transferer
 {
     public static class TransferTask
     {
-        public static void RequestTransfer(HostName localHostName, HostName remoteHostName, TransferInfo transferInfo)
+        public static void RequestTransfer(EndpointPair endpointPair, TransferInfo transferInfo)
         {
             TcpClient tcpClient = new TcpClient();
             tcpClient.Connected += (client, e) =>
@@ -47,12 +47,13 @@ namespace FileDrop.Helpers.TransferHelper.Transferer
                 var respond = JsonConvert.DeserializeObject<TransferRespond>(mes);
                 if (respond.Recieve)
                 {
-                    StartTransfer($"{localHostName.DisplayName}:{respond.Port}", respond.Token, transferInfo);
+                    StartTransfer($"{endpointPair.LocalHostName.DisplayName}:{respond.Port}", 
+                        respond.Token, transferInfo);
                 }
             };
 
             TouchSocketConfig config = new TouchSocketConfig();
-            config.SetRemoteIPHost(new IPHost(remoteHostName.DisplayName + ":31826"));
+            config.SetRemoteIPHost(new IPHost(endpointPair.RemoteHostName.DisplayName + ":31826"));
             tcpClient.Setup(config);
             int retry = 0;
             retryConnect:
