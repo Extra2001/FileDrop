@@ -20,47 +20,16 @@ namespace FileDrop.Helpers.TransferHelper.Transferer
         public Transfer transfer;
         public List<FileOperator> fileOperators;
 
-        public static TransferStatusManager StartNew(Transfer transferInfo, List<FileOperator> fileOperators)
+        public static TransferStatusManager StartNew(Transfer transferInfo)
         {
             manager = new TransferStatusManager()
             {
-                transfer = transferInfo,
-                fileOperators = fileOperators
+                transfer = transferInfo
             };
 
             ModelDialog.ShowWaiting("正在发送文件", $"正在发送{transferInfo.FileInfos.Count}个文件");
 
-            LoopAction.CreateLoopAction(-1, 1000, manager.ReportProgressSpeed)
-                .RunAsync();
-
             return manager;
-        }
-
-        public void ReportProgressSpeed(LoopAction loop)
-        {
-            bool finished = true;
-            long speedSum = 0;
-            float progress = 0;
-            foreach (var item in fileOperators)
-            {
-                if (item.Result.ResultCode == ResultCode.Default)
-                    finished = false;
-                speedSum += item.Speed();
-                progress += item.Progress;
-            }
-
-            progress /= fileOperators.Count;
-
-            if (finished || status == 0)
-            {
-                ReportDone();
-                loop.Dispose();
-            }
-            else
-            {
-                ModelDialog.ShowWaiting
-                ("正在发送文件", $"进度：{progress * 100}%，速度：{SpeedParser.Parse(speedSum)}");
-            }
         }
 
         public void ReportDone()

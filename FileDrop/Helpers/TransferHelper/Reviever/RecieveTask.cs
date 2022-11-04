@@ -1,5 +1,6 @@
 ﻿using FileDrop.Helpers.Dialog;
 using FileDrop.Helpers.TransferHelper.Reciever;
+using FileDrop.Helpers.TransferHelper.Transferer;
 using FileDrop.Models;
 using FileDrop.Models.Database;
 using FileDrop.Models.Transfer;
@@ -7,7 +8,10 @@ using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
 using Newtonsoft.Json;
 using System;
+using System.Collections.Generic;
 using System.Text;
+using System.Threading.Tasks;
+using TouchSocket.Core;
 using TouchSocket.Core.Config;
 using TouchSocket.Core.Dependency;
 using TouchSocket.Core.Log;
@@ -22,7 +26,7 @@ namespace FileDrop.Helpers.TransferHelper.Reviever
     public static class RecieveTask
     {
         private static TcpService server = null;
-        public static void WaitForTransfer(HostName localHostName)
+        public static void WaitForTransfer(HostName localHostName, HostName remoteHostName)
         {
             NetworkHelper.SetNetworkProfileToPrivate();
             if (server == null)
@@ -56,7 +60,7 @@ namespace FileDrop.Helpers.TransferHelper.Reviever
                                 Token = token
                             };
                             server.SendAsync(client.ID, JsonConvert.SerializeObject(respond));
-                            StartRecieve(port, token, transferInfo);
+                            _ = StartRecieve(remoteHostName.DisplayName + ":" + port, token, transferInfo);
                         }
                         else
                         {
@@ -76,9 +80,10 @@ namespace FileDrop.Helpers.TransferHelper.Reviever
             server?.Stop();
         }
 
-        public static TcpTouchRpcService StartRecieve(int port, string token, TransferInfo transferInfo)
+        public static async Task StartRecieve(string remoteIPHost, string token, TransferInfo transferInfo)
         {
             var folder = DirectoryHelper.GenerateRecieveFolder(transferInfo.deviceName);
+
             var transfer = new Transfer()
             {
                 DirectoryName = folder,
@@ -90,18 +95,40 @@ namespace FileDrop.Helpers.TransferHelper.Reviever
                 TransferDirection = TransferDirection.Recieve
             };
 
-            RecieveStatusManager.StartNew(transfer);
-            var service = new TouchSocketConfig()
-                .SetListenIPHosts(new IPHost[] { new IPHost(port) })
-                .SetRootPath(folder)
+            TcpTouchRpcClient client = new TouchSocketConfig()
+                .SetRemoteIPHost(remoteIPHost)
+                .SetVerifyToken(token)
                 .UsePlugin()
                 .ConfigurePlugins(a =>
                 {
-                    a.Add<RecievePlugin>();
+                    a.Add(new RecievePlugin());
                 })
-                .SetVerifyToken(token)
-                .BuildWithTcpTouchRpcService();
-            return service;
+                .BuildWithTcpTouchRpcClient();
+
+            List<Task<Result>> tasks = new List<Task<Result>>();
+            List<FileOperator> fileOperators = new List<FileOperator>();
+
+            foreach (var item in transferInfo.TransferInfos)
+            {
+                FileRequest fileRequest = new FileRequest()
+                {
+                    Path = item.Path,
+                    SavePath = item.InPackagePath
+                };
+                Metadata metadata = null;
+                if (item.TransferType == Models.TransferType.Zip)
+                    metadata = new Metadata().Add("Zip", "true");
+                FileOperator fileOperator = new FileOperator();
+                fileOperator.Timeout = -1;
+                tasks.Add(client.PullFileAsync(fileRequest, fileOperator, metadata));
+                fileOperators.Add(fileOperator);
+            }
+
+            RecieveStatusManager.StartNew(transfer, fileOperators);
+
+            await Task.WhenAll(tasks);
+
+            RecieveStatusManager.manager.ReportDone();
         }
     }
 }

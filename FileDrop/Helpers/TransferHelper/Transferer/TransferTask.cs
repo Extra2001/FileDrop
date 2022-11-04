@@ -16,6 +16,9 @@ using System.Text;
 using System.Threading.Tasks;
 using TouchSocket.Core;
 using TouchSocket.Core.Config;
+using TouchSocket.Core.Dependency;
+using TouchSocket.Core.Log;
+using TouchSocket.Core.Plugins;
 using TouchSocket.Core.Run;
 using TouchSocket.Rpc.TouchRpc;
 using TouchSocket.Sockets;
@@ -27,7 +30,7 @@ namespace FileDrop.Helpers.TransferHelper.Transferer
 {
     public static class TransferTask
     {
-        public static void RequestTransfer(HostName host, TransferInfo transferInfo)
+        public static void RequestTransfer(HostName localHostName, HostName remoteHostName, TransferInfo transferInfo)
         {
             TcpClient tcpClient = new TcpClient();
             tcpClient.Connected += (client, e) =>
@@ -44,12 +47,12 @@ namespace FileDrop.Helpers.TransferHelper.Transferer
                 var respond = JsonConvert.DeserializeObject<TransferRespond>(mes);
                 if (respond.Recieve)
                 {
-                    StartTransfer($"{host.DisplayName}:{respond.Port}", respond.Token, transferInfo);
+                    StartTransfer($"{localHostName.DisplayName}:{respond.Port}", respond.Token, transferInfo);
                 }
             };
 
             TouchSocketConfig config = new TouchSocketConfig();
-            config.SetRemoteIPHost(new IPHost(host.DisplayName + ":31826"));
+            config.SetRemoteIPHost(new IPHost(remoteHostName.DisplayName + ":31826"));
             tcpClient.Setup(config);
             int retry = 0;
             retryConnect:
@@ -69,58 +72,37 @@ namespace FileDrop.Helpers.TransferHelper.Transferer
             }
         }
 
-        private static async void StartTransfer(string remoteIPHost, string token, TransferInfo transferInfo)
+        private static void StartTransfer(string localIPHost, string token, TransferInfo transferInfo)
         {
-            await Task.Run(() =>
+            var transfer = new Transfer()
             {
-                var transfer = new Transfer()
-                {
-                    DirectoryName = null,
-                    StartTime = DateTimeOffset.Now,
-                    TransferInfos = transferInfo.TransferInfos,
-                    FileInfos = transferInfo.FileInfos,
-                    From = null,
-                    To = transferInfo.deviceName,
-                    TransferDirection = TransferDirection.Transfer
-                };
+                DirectoryName = null,
+                StartTime = DateTimeOffset.Now,
+                TransferInfos = transferInfo.TransferInfos,
+                FileInfos = transferInfo.FileInfos,
+                From = null,
+                To = transferInfo.deviceName,
+                TransferDirection = TransferDirection.Transfer
+            };
 
-                TcpTouchRpcClient client = new TouchSocketConfig()
-                .SetRemoteIPHost(remoteIPHost)
-                .SetVerifyToken(token)
+            TransferStatusManager.StartNew(transfer);
+
+            var service = new TouchSocketConfig()
+                .SetListenIPHosts(new IPHost[] { new IPHost(localIPHost) })
                 .UsePlugin()
                 .ConfigurePlugins(a =>
                 {
-                    a.Add(new TransferPlugin());
+                    a.Add<TransferPlugin>();
                 })
-                .BuildWithTcpTouchRpcClient();
+                .SetVerifyToken(token)
+                .BuildWithTcpTouchRpcService();
 
-                List<FileRequest> requests = new List<FileRequest>();
-                List<FileOperator> fileOperators = new List<FileOperator>();
-                List<Metadata> metadatas = new List<Metadata>();
-
-                foreach (var item in transferInfo.TransferInfos)
-                {
-                    FileRequest fileRequest = new FileRequest()
-                    {
-                        Path = item.Path,
-                        SavePath = item.InPackagePath
-                    };
-                    requests.Add(fileRequest);
-                    if (item.TransferType == Models.TransferType.Zip)
-                        metadatas.Add(new Metadata().Add("Zip", "true"));
-                    else metadatas.Add(null);
-                    var fo = new FileOperator();
-                    fo.Timeout = -1;
-                    fileOperators.Add(fo);
-                }
-
-                TransferStatusManager.StartNew(transfer, fileOperators);
-
-                client.PushFiles(10, requests.ToArray(), fileOperators.ToArray(), metadatas.ToArray());
-                client.Close();
-
+            service.Disconnected += (o, e) =>
+            {
+                transfer.EndTime = DateTimeOffset.Now;
+                Repo.database.GetCollection<Transfer>().Insert(transfer);
                 TransferStatusManager.manager.ReportDone();
-            });
+            };
         }
     }
 }

@@ -13,7 +13,6 @@ namespace FileDrop.Helpers.TransferHelper.Reviever
     {
         protected override void OnFileTransfering(ITouchRpc client, FileOperationEventArgs e)
         {
-            RecieveStatusManager.manager.ReportFileOperator(e.FileOperator);
             e.FileOperator.Timeout = -1;
             base.OnFileTransfering(client, e);
         }
@@ -21,6 +20,7 @@ namespace FileDrop.Helpers.TransferHelper.Reviever
         protected override void OnFileTransfered(ITouchRpc client, FileTransferStatusEventArgs e)
         {
             base.OnFileTransfered(client, e);
+
             if (e.Metadata != null && e.Metadata.AllKeys.Contains("Zip"))
             {
                 RestoreFile.RestoreZip(e.FileRequest.SavePath);

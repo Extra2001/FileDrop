@@ -7,6 +7,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
 using TouchSocket.Core;
@@ -21,9 +22,9 @@ namespace FileDrop.Helpers.TransferHelper.Reciever
         public static RecieveStatusManager manager { get; private set; }
         public int status = 1;
         public Transfer transfer;
-        public List<FileOperator> fileOperators = new List<FileOperator>();
+        public List<FileOperator> fileOperators;
 
-        public static RecieveStatusManager StartNew(Transfer transferInfo)
+        public static RecieveStatusManager StartNew(Transfer transferInfo, List<FileOperator> fileOperators)
         {
             manager = new RecieveStatusManager()
             {
@@ -31,15 +32,11 @@ namespace FileDrop.Helpers.TransferHelper.Reciever
             };
 
             ModelDialog.ShowWaiting("正在接收文件", $"正在接收{transferInfo.FileInfos.Count}个文件");
+            manager.fileOperators = fileOperators;
 
             LoopAction.CreateLoopAction(-1, 1000, manager.ReportProgressSpeed)
                 .RunAsync();
             return manager;
-        }
-
-        public void ReportFileOperator(FileOperator fileOperator)
-        {
-            fileOperators.Add(fileOperator);
         }
 
         public void ReportProgressSpeed(LoopAction loop)
@@ -59,7 +56,6 @@ namespace FileDrop.Helpers.TransferHelper.Reciever
 
             if ((finished && fileOperators.Count != 0) || status == 0)
             {
-                ReportDone();
                 loop.Dispose();
             }
             else
