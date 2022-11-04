@@ -21,17 +21,24 @@ namespace FileDrop.Helpers.TransferHelper.Transferer
 
         protected override void OnGet(ITcpClientBase client, HttpContextEventArgs e)
         {
-            var inPackagePath = Regex.Match
-                (e.Context.Request.URL, "http://\\d+.\\d+.\\d+.\\d+:\\d+/").Result("");
+            var inPackagePath = e.Context.Request.URL.Remove(0, 1);
             if (filePairs.TryGetValue(inPackagePath, out string path))
             {
-                e.Context.Response
-                    .SetStatus()
-                    .FromFile(path, e.Context.Request);
+                try
+                {
+                    e.Context.Response
+                        .SetStatus()
+                        .FromFile(path, e.Context.Request);
+                }
+                catch { }
             }
             else
             {
-                e.Context.Response.SetStatus("404", "NotFound");
+                try
+                {
+                    e.Context.Response.SetStatus("404", "NotFound");
+                }
+                catch { }
             }
             base.OnGet(client, e);
         }
