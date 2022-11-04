@@ -131,7 +131,9 @@ namespace FileDrop.Pages
 
         private void resetAdapterButton_Click(object sender, RoutedEventArgs e)
         {
+            WiFiDirectAdvertiser.StopAdvertisement();
             NetworkHelper.ResetWiFiAdapter();
+            WiFiDirectAdvertiser.StartAdvertisement();
         }
     }
 }

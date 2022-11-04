@@ -35,6 +35,7 @@
     <PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
     <PackageReference Include="SharpZipLib" Version="1.4.0" />
     <PackageReference Include="TouchSocket" Version="0.7.4" />
+    <PackageReference Include="WindowsFirewallHelper" Version="2.2.0.86" />
     <Manifest Include="$(ApplicationManifest)" />
   </ItemGroup>
 

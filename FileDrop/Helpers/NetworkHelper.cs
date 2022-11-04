@@ -5,6 +5,7 @@ using System.Linq;
 using System.Net.NetworkInformation;
 using System.Text;
 using System.Threading.Tasks;
+using WindowsFirewallHelper;
 
 namespace FileDrop.Helpers
 {
@@ -47,23 +48,13 @@ namespace FileDrop.Helpers
 
         public static void SetNetworkProfileToPrivate()
         {
-            var interfaces = NetworkInterface.GetAllNetworkInterfaces();
-
-            foreach (var item in interfaces)
-            {
-                if (item.Description.Contains("Direct"))
-                {
-                    var processInfo = new ProcessStartInfo
-                    {
-                        FileName = "powershell.exe",
-                        Arguments = $"Set-NetConnectionProfile " +
-                            $"-InterfaceAlias \"{item.Name}\" -NetworkCategory \"Private\"",
-                        UseShellExecute = true
-                    };
-
-                    Process.Start(processInfo);
-                }
-            }
+            //var rule = FirewallManager.Instance.CreateApplicationRule(
+            //      @"FileDrop Rule",
+            //      FirewallAction.Allow,
+            //      Environment.ProcessPath
+            //  );
+            //rule.Direction = FirewallDirection.Inbound;
+            //FirewallManager.Instance.Rules.Add(rule);
         }
     }
 }

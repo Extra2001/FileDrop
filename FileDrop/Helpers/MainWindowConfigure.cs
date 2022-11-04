@@ -42,6 +42,8 @@ namespace FileDrop.Helpers
             App.mainWindow = mainWindow;
             SetCustomTitleBar(customTitleBar);
             TrySetSystemBackdrop();
+
+            NetworkHelper.SetNetworkProfileToPrivate();
         }
 
         #region 设置应用背景
