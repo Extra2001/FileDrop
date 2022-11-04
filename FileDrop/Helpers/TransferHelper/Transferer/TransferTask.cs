@@ -20,16 +20,19 @@ using TouchSocket.Core.Dependency;
 using TouchSocket.Core.Log;
 using TouchSocket.Core.Plugins;
 using TouchSocket.Core.Run;
+using TouchSocket.Http;
 using TouchSocket.Rpc.TouchRpc;
 using TouchSocket.Sockets;
 using Windows.Networking;
 using Windows.Storage;
 using Windows.Storage.Streams;
+using WindowsFirewallHelper;
 
 namespace FileDrop.Helpers.TransferHelper.Transferer
 {
     public static class TransferTask
     {
+        private static HttpService service = null;
         public static void RequestTransfer(EndpointPair endpointPair, TransferInfo transferInfo)
         {
             TcpClient tcpClient = new TcpClient();
@@ -37,18 +40,25 @@ namespace FileDrop.Helpers.TransferHelper.Transferer
             {
                 tcpClient.Send(JsonConvert.SerializeObject(transferInfo));
             };
-            tcpClient.Disconnected += (client, e) =>
-            {
-
-            };
             tcpClient.Received += (client, byteBlock, requestInfo) =>
             {
                 string mes = Encoding.UTF8.GetString(byteBlock.Buffer, 0, byteBlock.Len);
-                var respond = JsonConvert.DeserializeObject<TransferRespond>(mes);
-                if (respond.Recieve)
+                if (mes == "RecieveDone")
                 {
-                    StartTransfer($"{endpointPair.LocalHostName.DisplayName}:{respond.Port}", 
-                        respond.Token, transferInfo);
+                    TransferStatusManager.manager.ReportDone();
+                    tcpClient.SafeDispose();
+                    service.SafeDispose();
+                    service = null;
+                    tcpClient = null;
+                }
+                else
+                {
+                    var respond = JsonConvert.DeserializeObject<TransferRespond>(mes);
+                    if (respond.Recieve)
+                    {
+                        StartTransfer($"{endpointPair.LocalHostName.DisplayName}:{respond.Port}",
+                            respond.Token, transferInfo);
+                    }
                 }
             };
 
@@ -72,7 +82,6 @@ namespace FileDrop.Helpers.TransferHelper.Transferer
                 }
             }
         }
-
         private static void StartTransfer(string localIPHost, string token, TransferInfo transferInfo)
         {
             var transfer = new Transfer()
@@ -88,26 +97,22 @@ namespace FileDrop.Helpers.TransferHelper.Transferer
 
             TransferStatusManager.StartNew(transfer);
 
-            var service = new TouchSocketConfig()
+            service.SafeDispose();
+            service = new HttpService();
+            var config = new TouchSocketConfig();
+            var plugin = new TransferHttpPlugin();
+
+            foreach (var item in transferInfo.TransferInfos)
+                plugin.AddFile(item.Path, item.InPackagePath);
+
+            config.UsePlugin()
                 .SetListenIPHosts(new IPHost[] { new IPHost(localIPHost) })
-                .UsePlugin()
                 .ConfigurePlugins(a =>
                 {
-                    a.Add<TransferPlugin>();
-                })
-                .SetVerifyToken(token)
-                .BuildWithTcpTouchRpcService();
+                    a.Add(plugin);
+                });
 
-            service.Disconnected += (o, e) =>
-            {
-                transfer.EndTime = DateTimeOffset.Now;
-                try
-                {
-                    Repo.database.GetCollection<Transfer>().Insert(transfer);
-                }
-                catch { }
-                TransferStatusManager.manager.ReportDone();
-            };
+            service.Setup(config).Start();
         }
     }
 }

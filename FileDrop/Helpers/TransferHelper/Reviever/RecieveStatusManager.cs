@@ -1,4 +1,6 @@
-﻿using FileDrop.Helpers.Dialog;
+﻿using Downloader;
+using FileDrop.Helpers.Dialog;
+using FileDrop.Helpers.TransferHelper.Reviever;
 using FileDrop.Helpers.TransferHelper.Transferer;
 using FileDrop.Models;
 using FileDrop.Models.Database;
@@ -22,9 +24,9 @@ namespace FileDrop.Helpers.TransferHelper.Reciever
         public static RecieveStatusManager manager { get; private set; }
         public int status = 1;
         public Transfer transfer;
-        public List<FileOperator> fileOperators;
+        public List<DownloadProgress> downloaders;
 
-        public static RecieveStatusManager StartNew(Transfer transferInfo, List<FileOperator> fileOperators)
+        public static RecieveStatusManager StartNew(Transfer transferInfo, List<DownloadService> downloaders)
         {
             manager = new RecieveStatusManager()
             {
@@ -32,53 +34,75 @@ namespace FileDrop.Helpers.TransferHelper.Reciever
             };
 
             ModelDialog.ShowWaiting("正在接收文件", $"正在接收{transferInfo.FileInfos.Count}个文件");
-            manager.fileOperators = fileOperators;
 
-            LoopAction.CreateLoopAction(-1, 1000, manager.ReportProgressSpeed)
-                .RunAsync();
-            return manager;
-        }
-
-        public void ReportProgressSpeed(LoopAction loop)
-        {
-            bool finished = true;
-            long speedSum = 0;
-            float progress = 0;
-            foreach (var item in fileOperators)
+            foreach (var item in downloaders)
             {
-                if (item.Result.ResultCode == ResultCode.Default)
-                    finished = false;
-                speedSum += item.Speed();
-                progress += item.Progress;
+                item.DownloadFileCompleted += manager.Item_DownloadFileCompleted;
+                item.DownloadProgressChanged += manager.Item_DownloadProgressChanged;
+                manager.downloaders.Add(new DownloadProgress(item));
             }
 
-            progress /= transfer.TransferInfos.Count;
-
-            if ((finished && fileOperators.Count != 0) || status == 0)
+            LoopAction.CreateLoopAction(-1, 1000, manager.ReportProgress);
+            return manager;
+        }
+        private void Item_DownloadProgressChanged(object sender, DownloadProgressChangedEventArgs e)
+        {
+            var find = downloaders.Where(x => x.downloader == sender as DownloadService)
+                .FirstOrDefault();
+            find.progressPercentage = e.ProgressPercentage;
+        }
+        private void Item_DownloadFileCompleted(object sender, System.ComponentModel.AsyncCompletedEventArgs e)
+        {
+            var find = downloaders.Where(x => x.downloader == sender as DownloadService)
+                .FirstOrDefault();
+            find.completed = true;
+        }
+        private void ReportProgress(LoopAction loop)
+        {
+            if (downloaders.Where(x => !x.completed).Any())
             {
-                loop.Dispose();
+                double progress = 0;
+                foreach (var item in downloaders)
+                    progress += item.progressPercentage;
+                progress /= downloaders.Count;
+                ModelDialog.ShowWaiting("正在接收文件", $"进度：{progress}%");
             }
             else
             {
-                ModelDialog.ShowWaiting
-                ("正在接收文件", $"进度：{progress * 100}%，速度：{SpeedParser.Parse(speedSum)}");
+                loop.SafeDispose();
+                ReportDone();
             }
         }
-
         public void ReportDone()
         {
             status = 0;
-            transfer.EndTime = DateTimeOffset.Now;
-            var collection = Repo.database.GetCollection<Transfer>();
-            collection.Insert(transfer);
+            try
+            {
+                transfer.EndTime = DateTimeOffset.Now;
+                var collection = Repo.database.GetCollection<Transfer>();
+                collection.Insert(transfer);
+            }
+            catch { }
+            RecieveTask.RecieveDone();
             _ = ModelDialog.ShowDialog("接收完成", $"共接收了{transfer.FileInfos.Count}个文件");
             _ = Launcher.LaunchFolderPathAsync(transfer.DirectoryName);
         }
-
         public void ReportError(string message)
         {
             _ = ModelDialog.ShowDialog("接收错误", message);
             status = 2;
+        }
+
+        public class DownloadProgress
+        {
+            public DownloadService downloader;
+            public bool completed = false;
+            public double progressPercentage = 0;
+
+            public DownloadProgress(DownloadService service)
+            {
+                downloader = service;
+            }
         }
     }
 }
