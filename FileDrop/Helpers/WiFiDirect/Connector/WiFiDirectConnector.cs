@@ -277,6 +277,7 @@ namespace FileDrop.Helpers.WiFiDirect.Connector
 
                 wfdDevice.ConnectionStatusChanged += OnConnectionStatusChanged;
                 connectedDevice = wfdDevice;
+                NetworkHelper.SetNetworkProfileToPrivate();
                 ConnectStatusManager.ReportProgress("L2连接建立成功，正在发起L4连接请求");
                 callback.Invoke(wfdDevice);
             });

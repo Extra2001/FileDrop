@@ -20,6 +20,7 @@ namespace FileDrop.Helpers.TransferHelper.Reviever
         private static InfoSocketServer server = null;
         public static void WaitForTransfer(HostName localHostName)
         {
+            NetworkHelper.SetNetworkProfileToPrivate();
             if (server != null)
             {
                 server = new InfoSocketServer();
