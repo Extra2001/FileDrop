@@ -24,26 +24,27 @@ namespace FileDrop.Helpers
             return randomPort;
         }
 
-        public static void ResetWiFiAdapter()
+        public static async Task ResetWiFiAdapter()
         {
             var interfaces = NetworkInterface.GetAllNetworkInterfaces();
-
+            var tasks = new List<Task>();
             foreach (var item in interfaces)
             {
-                if (item.Name.Contains("WLAN") ||
-                    item.NetworkInterfaceType == NetworkInterfaceType.Wireless80211)
+                if (item.NetworkInterfaceType == NetworkInterfaceType.Wireless80211
+                    && !item.Description.Contains("Direct"))
                 {
                     var processInfo = new ProcessStartInfo
                     {
-                        Verb = item.Description.Contains("Direct") ? "" : "runas",
+                        Verb = "runas",
                         FileName = "powershell.exe",
-                        Arguments = "Restart-NetAdapter -Name \"WLAN\"",
-                        UseShellExecute = true
+                        Arguments = $"Restart-NetAdapter -Name \\\"{item.Name}\\\"",
+                        UseShellExecute = true,
+                        CreateNoWindow = true,
                     };
-
-                    Process.Start(processInfo);
+                    tasks.Add(Process.Start(processInfo).WaitForExitAsync());
                 }
             }
+            await Task.WhenAll(tasks);
         }
 
         public static void SetNetworkProfileToPrivate()

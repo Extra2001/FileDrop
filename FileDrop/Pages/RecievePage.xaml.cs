@@ -129,10 +129,12 @@ namespace FileDrop.Pages
             openedFlyout = sender as Flyout;
         }
 
-        private void resetAdapterButton_Click(object sender, RoutedEventArgs e)
+        private async void resetAdapterButton_Click(object sender, RoutedEventArgs e)
         {
             WiFiDirectAdvertiser.StopAdvertisement();
-            NetworkHelper.ResetWiFiAdapter();
+            await Task.Delay(50);
+            await NetworkHelper.ResetWiFiAdapter();
+            await Task.Delay(300);
             WiFiDirectAdvertiser.StartAdvertisement();
         }
     }
