@@ -1,6 +1,7 @@
 ﻿using FileDrop.Helpers.Dialog;
 using FileDrop.Helpers.TransferHelper.Reciever;
 using FileDrop.Helpers.WiFiDirect;
+using FileDrop.Helpers.WiFiDirect.Connector;
 using FileDrop.Models;
 using FileDrop.Models.Database;
 using FileDrop.Models.Transfer;
@@ -50,7 +51,22 @@ namespace FileDrop.Helpers.TransferHelper.Transferer
             TouchSocketConfig config = new TouchSocketConfig();
             config.SetRemoteIPHost(new IPHost(host.DisplayName + ":31826"));
             tcpClient.Setup(config);
-            tcpClient.Connect(30000);
+            int retry = 0;
+            retryConnect:
+            try
+            {
+                tcpClient.Connect();
+            }
+            catch
+            {
+                if (retry > 30)
+                    ConnectStatusManager.ReportError(true, "连接超时");
+                else
+                {
+                    retry++;
+                    goto retryConnect;
+                }
+            }
         }
 
         private static async void StartTransfer(string remoteIPHost, string token, TransferInfo transferInfo)
