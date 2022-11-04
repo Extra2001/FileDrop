@@ -1,9 +1,13 @@
-﻿using FileDrop.Helpers.TransferHelper.Reciever;
+﻿using FileDrop.Helpers.Dialog;
+using FileDrop.Helpers.TransferHelper.Reciever;
 using FileDrop.Models;
 using FileDrop.Models.Database;
+using FileDrop.Models.Transfer;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
+using Newtonsoft.Json;
 using System;
+using System.Text;
 using TouchSocket.Core.Config;
 using TouchSocket.Core.Dependency;
 using TouchSocket.Core.Log;
@@ -17,17 +21,45 @@ namespace FileDrop.Helpers.TransferHelper.Reviever
 {
     public static class RecieveTask
     {
-        private static InfoSocketServer server = null;
+        private static TcpService server = null;
         public static void WaitForTransfer(HostName localHostName)
         {
             NetworkHelper.SetNetworkProfileToPrivate();
             if (server != null)
             {
-                server = new InfoSocketServer();
+                server = new TcpService();
+                server.Connected += (o, e) =>
+                {
+
+                };
+                server.Received += (client, byteBlock, requestInfo) =>
+                {
+                    string mes = Encoding.UTF8.GetString(byteBlock.Buffer, 0, byteBlock.Len);
+                    var transferInfo = JsonConvert.DeserializeObject<TransferInfo>(mes);
+                    App.mainWindow.DispatcherQueue.TryEnqueue(async () =>
+                    {
+                        var dres = await ModelDialog.ShowDialog("开始传输",
+                        $"{transferInfo.deviceName}想要共享{transferInfo.FileInfos.Count}个文件（夹）", "接受", "取消");
+
+                        if (dres == ContentDialogResult.Primary)
+                        {
+                            var respond = new TransferRespond()
+                            {
+                                Recieve = true,
+                                Port = NetworkHelper.GetRandomPort(),
+                                Token = Guid.NewGuid().ToString()
+                            };
+                            server.SendAsync(client.ID, JsonConvert.SerializeObject(respond));
+                        }
+                        else
+                        {
+                            var respond = new TransferRespond() { Recieve = false };
+                            server.SendAsync(client.ID, JsonConvert.SerializeObject(respond));
+                        }
+                    });
+                };
                 server.Setup(new TouchSocketConfig()
-                    .SetListenIPHosts(new IPHost[] { new IPHost(localHostName.DisplayName + ":" + 31826) })
-                    .SetMaxCount(10000)
-                    .SetThreadCount(10))
+                    .SetListenIPHosts(new IPHost[] { new IPHost(localHostName.DisplayName + ":" + 31826) }))
                     .Start();
             }
         }
