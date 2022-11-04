@@ -15,6 +15,7 @@ namespace FileDrop.Helpers.Dialog
         public static async Task<ContentDialogResult> ShowDialog
             (string title, string content, string primaryButton = "确定", string closeButton = null)
         {
+            await Task.Delay(30);
             if (showedDialogs != null)
                 showedDialogs.Hide();
 
