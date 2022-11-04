@@ -67,7 +67,7 @@ namespace FileDrop.Helpers.TransferHelper
                     transferItems.Add(new TransferItem()
                     {
                         Id = GetId(transferItems),
-                        InPackagePath = "",
+                        InPackagePath = "package.zip",
                         TransferType = TransferType.Zip,
                         Path = zipPath
                     });

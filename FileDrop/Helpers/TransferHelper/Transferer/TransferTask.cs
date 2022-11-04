@@ -59,7 +59,7 @@ namespace FileDrop.Helpers.TransferHelper.Transferer
             }
             catch
             {
-                if (retry > 30)
+                if (retry > 3)
                     ConnectStatusManager.ReportError(true, "连接超时");
                 else
                 {
@@ -102,19 +102,24 @@ namespace FileDrop.Helpers.TransferHelper.Transferer
                 {
                     FileRequest fileRequest = new FileRequest()
                     {
-                        Path = item.InPackagePath,
-                        SavePath = item.Path
+                        Path = item.Path,
+                        SavePath = item.InPackagePath
                     };
                     requests.Add(fileRequest);
                     if (item.TransferType == Models.TransferType.Zip)
                         metadatas.Add(new Metadata().Add("Zip", "true"));
-                    fileOperators.Add(new FileOperator());
+                    else metadatas.Add(null);
+                    var fo = new FileOperator();
+                    fo.Timeout = -1;
+                    fileOperators.Add(fo);
                 }
 
                 TransferStatusManager.StartNew(transfer, fileOperators);
 
                 client.PushFiles(10, requests.ToArray(), fileOperators.ToArray(), metadatas.ToArray());
                 client.Close();
+
+                TransferStatusManager.manager.ReportDone();
             });
         }
     }
