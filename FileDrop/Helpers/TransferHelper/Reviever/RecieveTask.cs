@@ -129,6 +129,7 @@ namespace FileDrop.Helpers.TransferHelper.Reviever
             RecieveStatusManager.StartNew(transfer, fileOperators);
 
             await Task.WhenAll(tasks);
+            client.Close();
 
             RecieveStatusManager.manager.ReportDone();
         }

@@ -101,7 +101,11 @@ namespace FileDrop.Helpers.TransferHelper.Transferer
             service.Disconnected += (o, e) =>
             {
                 transfer.EndTime = DateTimeOffset.Now;
-                Repo.database.GetCollection<Transfer>().Insert(transfer);
+                try
+                {
+                    Repo.database.GetCollection<Transfer>().Insert(transfer);
+                }
+                catch { }
                 TransferStatusManager.manager.ReportDone();
             };
         }
