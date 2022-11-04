@@ -50,7 +50,7 @@ namespace FileDrop.Helpers.TransferHelper.Transferer
             TouchSocketConfig config = new TouchSocketConfig();
             config.SetRemoteIPHost(new IPHost(host.DisplayName + ":31826"));
             tcpClient.Setup(config);
-            tcpClient.Connect();
+            tcpClient.Connect(30000);
         }
 
         private static async void StartTransfer(string remoteIPHost, string token, TransferInfo transferInfo)

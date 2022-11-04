@@ -84,6 +84,17 @@ namespace FileDrop.Helpers.WiFiDirect.Connector
             }
             _deviceWatcher = null;
         }
+        public static void CloseDevice()
+        {
+            if (connectedDevice != null)
+            {
+                try
+                {
+                    connectedDevice.Dispose();
+                }
+                catch { }
+            }
+        }
         #endregion
 
         #region DeviceWatcherEvents
@@ -214,10 +225,8 @@ namespace FileDrop.Helpers.WiFiDirect.Connector
             {
                 ConnectStatusManager.ReportProgress("开始发起连接");
 
-                if (connectedDevice != null)
-                {
-                    try { connectedDevice.Dispose(); } catch { }
-                }
+                CloseDevice();
+
                 if (!deviceInfo.Pairing.IsPaired)
                 {
                     if (!await ConnectHelper.RequestPairDeviceAsync(deviceInfo.Pairing))
@@ -268,13 +277,16 @@ namespace FileDrop.Helpers.WiFiDirect.Connector
 
                 wfdDevice.ConnectionStatusChanged += OnConnectionStatusChanged;
                 connectedDevice = wfdDevice;
-                ConnectStatusManager.ReportProgress("L2连接建立成功，正在发起传输请求");
+                ConnectStatusManager.ReportProgress("L2连接建立成功，正在发起L4连接请求");
                 callback.Invoke(wfdDevice);
             });
         }
         private static void OnConnectionStatusChanged(WiFiDirectDevice sender, object arg)
         {
-
+            if (sender.ConnectionStatus == WiFiDirectConnectionStatus.Disconnected)
+            {
+                CloseDevice();
+            }
         }
     }
 }

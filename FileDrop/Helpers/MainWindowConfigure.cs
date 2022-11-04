@@ -42,7 +42,6 @@ namespace FileDrop.Helpers
             App.mainWindow = mainWindow;
             SetCustomTitleBar(customTitleBar);
             TrySetSystemBackdrop();
-            RecieveTask.WaitForTransfer();
         }
 
         #region 设置应用背景
@@ -178,6 +177,9 @@ namespace FileDrop.Helpers
             if (WiFiDirectAdvertiser.Started)
                 WiFiDirectAdvertiser.StopAdvertisement();
             WiFiDirectConnector.StopWatcher();
+            WiFiDirectAdvertiser.CloseDevice();
+            WiFiDirectConnector.StopWatcher();
+            WiFiDirectConnector.CloseDevice();
             RecieveTask.StopWaitForTransfer();
         }
 

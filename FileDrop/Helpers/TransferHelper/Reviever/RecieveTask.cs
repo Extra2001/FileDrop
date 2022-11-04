@@ -11,19 +11,20 @@ using TouchSocket.Core.Plugins;
 using TouchSocket.Rpc.TouchRpc;
 using TouchSocket.Sockets;
 using Windows.Devices.Portable;
+using Windows.Networking;
 
 namespace FileDrop.Helpers.TransferHelper.Reviever
 {
     public static class RecieveTask
     {
         private static InfoSocketServer server = null;
-        public static void WaitForTransfer()
+        public static void WaitForTransfer(HostName localHostName)
         {
             if (server != null)
             {
                 server = new InfoSocketServer();
                 server.Setup(new TouchSocketConfig()
-                    .SetListenIPHosts(new IPHost[] { new IPHost(31826) })
+                    .SetListenIPHosts(new IPHost[] { new IPHost(localHostName.DisplayName + ":" + 31826) })
                     .SetMaxCount(10000)
                     .SetThreadCount(10))
                     .Start();

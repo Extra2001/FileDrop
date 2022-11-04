@@ -54,8 +54,14 @@ namespace FileDrop.Helpers.WiFiDirect.Advertiser
                 _publisher.StatusChanged -= OnStatusChanged;
             }
             _listener.ConnectionRequested -= OnConnectionRequested;
-            connectedDevice?.Dispose();
-            connectedDevice = null;
+        }
+        public static void CloseDevice()
+        {
+            RecieveTask.StopWaitForTransfer();
+            if (connectedDevice != null)
+            {
+                try { connectedDevice.Dispose(); } catch { }
+            }
         }
         #endregion
 
@@ -113,7 +119,8 @@ namespace FileDrop.Helpers.WiFiDirect.Advertiser
 
             wfdDevice.ConnectionStatusChanged += OnConnectionStatusChanged;
             connectedDevice = wfdDevice;
-            ConnectedStatusManager.ReportProgress("已建立L2连接");
+            ConnectedStatusManager.ReportProgress("已建立L2连接，正在等待L4连接请求");
+            RecieveTask.WaitForTransfer(wfdDevice.GetConnectionEndpointPairs()[0].LocalHostName);
             return true;
         }
         private static async Task<bool> IsAepPairedAsync(string deviceId)
@@ -151,12 +158,7 @@ namespace FileDrop.Helpers.WiFiDirect.Advertiser
         {
             if (sender.ConnectionStatus == WiFiDirectConnectionStatus.Disconnected)
             {
-                try
-                {
-                    connectedDevice.Dispose();
-                }
-                catch { }
-                connectedDevice = null;
+                CloseDevice();
             }
         }
     }

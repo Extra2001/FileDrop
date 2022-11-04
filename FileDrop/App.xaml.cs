@@ -23,7 +23,9 @@ namespace FileDrop
             Repo.SaveAndClose();
             if (WiFiDirectAdvertiser.Started)
                 WiFiDirectAdvertiser.StopAdvertisement();
+            WiFiDirectAdvertiser.CloseDevice();
             WiFiDirectConnector.StopWatcher();
+            WiFiDirectConnector.CloseDevice();
             RecieveTask.StopWaitForTransfer();
             await ModelDialog.ShowDialog("提示", "发生未捕获的异常" + e.Message);
             Exit();
