@@ -92,7 +92,7 @@ namespace FileDrop.Helpers.TransferHelper.Reviever
             List<Task> tasks = new List<Task>();
             List<DownloadService> downloaders = new List<DownloadService>();
 
-            foreach (var item in transferInfo.TransferInfos)
+            for (int i = 0; i < transferInfo.TransferInfos.Count; i++)
             {
                 var downloadOpt = new DownloadConfiguration()
                 {
@@ -100,12 +100,18 @@ namespace FileDrop.Helpers.TransferHelper.Reviever
                     ParallelDownload = true
                 };
                 var downloader = new DownloadService(downloadOpt);
-                string file = Path.Combine(folder, item.InPackagePath);
-                string url = @$"http://{remoteIPHost}/{item.InPackagePath}";
-                tasks.Add(downloader.DownloadFileTaskAsync(url, file));
+                downloaders.Add(downloader);
             }
 
             RecieveStatusManager.StartNew(transfer, downloaders);
+
+            for (int i = 0; i < downloaders.Count; i++)
+            {
+                var item = transferInfo.TransferInfos[i];
+                string file = Path.Combine(folder, item.InPackagePath);
+                string url = @$"http://{remoteIPHost}/{item.InPackagePath}";
+                tasks.Add(downloaders[i].DownloadFileTaskAsync(url, file));
+            }
 
             await Task.WhenAll(tasks);
         }
