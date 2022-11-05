@@ -9,6 +9,7 @@ using Newtonsoft.Json;
 using System;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using TouchSocket.Core.Config;
 using TouchSocket.Sockets;
@@ -73,26 +74,35 @@ namespace FileDrop.Helpers.TransferHelper.Reviever
                 TransferDirection = TransferDirection.Recieve
             };
 
-            ftpClient = new AsyncFtpClient(host, "root", token, port);
-            await ftpClient.AutoConnect();
-
             RecieveStatusManager.StartNew(transfer);
 
-            var files = transferInfo.TransferInfos.Select(x => x.InPackagePath);
-            var results = await ftpClient.DownloadDirectory(folder, "/", progress: new DownloadProgressManager());
+            ftpClient = new AsyncFtpClient(host, "root", token, port);
+            var cancel = new CancellationTokenSource(3000);
+            var connectResult = await ftpClient.AutoConnect(cancel.Token);
 
-            RecieveStatusManager.manager.ReportDone(results);
+            if (connectResult != null)
+            {
+                var files = transferInfo.TransferInfos.Select(x => x.InPackagePath);
+                var results = await ftpClient.DownloadDirectory(folder, "/", progress: new DownloadProgressManager());
+
+                RecieveStatusManager.manager.ReportDone(results);
+            }
+            else
+            {
+                RecieveStatusManager.manager.ReportError("连接超时");
+            }
         }
         public static void RecieveDone()
         {
             try
             {
-                ftpClient.AutoDispose();
                 server.Send(server.GetClients().FirstOrDefault().ID, "RecieveDone");
                 server.Clear();
                 server.Stop();
                 server.SafeDispose();
                 server = null;
+                ftpClient.AutoDispose();
+                ftpClient = null;
             }
             catch { }
         }

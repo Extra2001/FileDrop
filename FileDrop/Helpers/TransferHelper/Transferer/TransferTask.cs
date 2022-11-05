@@ -19,6 +19,7 @@ namespace FileDrop.Helpers.TransferHelper.Transferer
     public static class TransferTask
     {
         private static IFtpServerHost service = null;
+        private static ServiceProvider serviceProvider = null;
         private static TcpClient tcpClient = null;
         public static void RequestTransfer(EndpointPair endpointPair, TransferInfo transferInfo)
         {
@@ -76,6 +77,7 @@ namespace FileDrop.Helpers.TransferHelper.Transferer
             TransferStatusManager.manager.ReportDone(message);
             tcpClient.SafeDispose();
             service?.StopAsync().Wait();
+            serviceProvider?.SafeDispose();
             service = null;
             tcpClient = null;
         }
@@ -119,12 +121,10 @@ namespace FileDrop.Helpers.TransferHelper.Transferer
                 options.Port = port;
             });
 
-            using (var serviceProvider = services.BuildServiceProvider())
-            {
-                var ftpServerHost = serviceProvider.GetRequiredService<IFtpServerHost>();
-                await ftpServerHost.StartAsync(CancellationToken.None);
-                return ftpServerHost;
-            }
+            serviceProvider = services.BuildServiceProvider();
+            var ftpServerHost = serviceProvider.GetRequiredService<IFtpServerHost>();
+            await ftpServerHost.StartAsync(CancellationToken.None);
+            return ftpServerHost;
         }
     }
 }
