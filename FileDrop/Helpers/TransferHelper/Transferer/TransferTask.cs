@@ -9,6 +9,7 @@ using Newtonsoft.Json;
 using System;
 using System.Text;
 using System.Threading;
+using System.Threading.Tasks;
 using TouchSocket.Core.Config;
 using TouchSocket.Sockets;
 using Windows.Networking;
@@ -18,9 +19,16 @@ namespace FileDrop.Helpers.TransferHelper.Transferer
     public static class TransferTask
     {
         private static IFtpServerHost service = null;
+        private static TcpClient tcpClient = null;
         public static void RequestTransfer(EndpointPair endpointPair, TransferInfo transferInfo)
         {
-            TcpClient tcpClient = new TcpClient();
+            tcpClient = new TcpClient();
+            transferInfo.port = NetworkHelper.GetRandomPort();
+            transferInfo.token = Guid.NewGuid().ToString();
+
+            StartTransfer(endpointPair.LocalHostName.DisplayName,
+                 transferInfo.port, transferInfo.token, transferInfo);
+
             tcpClient.Connected += (client, e) =>
             {
                 tcpClient.Send(JsonConvert.SerializeObject(transferInfo));
@@ -30,18 +38,14 @@ namespace FileDrop.Helpers.TransferHelper.Transferer
                 string mes = Encoding.UTF8.GetString(byteBlock.Buffer, 0, byteBlock.Len);
                 if (mes == "RecieveDone")
                 {
-                    TransferStatusManager.manager.ReportDone();
-                    tcpClient.SafeDispose();
-                    service.StopAsync().Wait();
-                    service = null;
-                    tcpClient = null;
+                    StopTransfer("传输完成");
                 }
                 else
                 {
                     var respond = JsonConvert.DeserializeObject<TransferRespond>(mes);
-                    if (respond.Recieve)
+                    if (!respond.Recieve)
                     {
-                        StartTransfer(respond.Port, respond.Token, transferInfo);
+                        StopTransfer("对方拒绝了传输");
                     }
                 }
             };
@@ -60,9 +64,23 @@ namespace FileDrop.Helpers.TransferHelper.Transferer
                 }
                 catch { }
             }
-            if (!success) ConnectStatusManager.ReportError(true, "连接超时");
+            if (!success)
+            {
+                ConnectStatusManager.ReportError(true, "连接超时");
+                StopTransfer(null);
+            }
         }
-        private static void StartTransfer(int port, string token, TransferInfo transferInfo)
+
+        private static void StopTransfer(string message)
+        {
+            TransferStatusManager.manager.ReportDone(message);
+            tcpClient.SafeDispose();
+            service?.StopAsync().Wait();
+            service = null;
+            tcpClient = null;
+        }
+
+        private static async void StartTransfer(string host, int port, string token, TransferInfo transferInfo)
         {
             var transfer = new Transfer()
             {
@@ -77,10 +95,11 @@ namespace FileDrop.Helpers.TransferHelper.Transferer
 
             TransferStatusManager.StartNew(transfer);
 
-            service = CreateFTPServer(port, token, transferInfo);
+            service = await CreateFTPServer(host, port, token, transferInfo);
         }
 
-        public static IFtpServerHost CreateFTPServer(int port,string token, TransferInfo transferInfo)
+        public static async Task<IFtpServerHost> CreateFTPServer
+            (string host, int port,string token, TransferInfo transferInfo)
         {
             var services = new ServiceCollection();
 
@@ -96,13 +115,14 @@ namespace FileDrop.Helpers.TransferHelper.Transferer
 
             services.Configure<FtpServerOptions>(options =>
             {
+                options.ServerAddress = host;
                 options.Port = port;
             });
 
             using (var serviceProvider = services.BuildServiceProvider())
             {
                 var ftpServerHost = serviceProvider.GetRequiredService<IFtpServerHost>();
-                ftpServerHost.StartAsync(CancellationToken.None);
+                await ftpServerHost.StartAsync(CancellationToken.None);
                 return ftpServerHost;
             }
         }

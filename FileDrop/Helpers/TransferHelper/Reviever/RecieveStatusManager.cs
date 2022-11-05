@@ -1,20 +1,10 @@
 ﻿using FileDrop.Helpers.Dialog;
 using FileDrop.Helpers.TransferHelper.Reviever;
-using FileDrop.Helpers.TransferHelper.Transferer;
-using FileDrop.Models;
 using FileDrop.Models.Database;
 using FluentFTP;
-using Microsoft.UI.Xaml.Media;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reflection;
-using System.Runtime.CompilerServices;
-using System.Text;
-using System.Threading.Tasks;
-using TouchSocket.Core;
-using TouchSocket.Core.Run;
-using TouchSocket.Rpc.TouchRpc;
 using Windows.System;
 
 namespace FileDrop.Helpers.TransferHelper.Reciever
@@ -57,6 +47,7 @@ namespace FileDrop.Helpers.TransferHelper.Reciever
         public void ReportError(string message)
         {
             _ = ModelDialog.ShowDialog("接收错误", message);
+            RecieveTask.RecieveDone();
             status = 2;
         }
     }

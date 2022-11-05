@@ -9,7 +9,5 @@ namespace FileDrop.Models.Transfer
     public class TransferRespond
     {
         public bool Recieve { get; set; }
-        public int Port { get; set; }
-        public string Token { get; set; }
     }
 }

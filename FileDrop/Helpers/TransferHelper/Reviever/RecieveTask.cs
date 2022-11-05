@@ -1,30 +1,17 @@
 ﻿using FileDrop.Helpers.Dialog;
 using FileDrop.Helpers.TransferHelper.Reciever;
-using FileDrop.Helpers.TransferHelper.Transferer;
 using FileDrop.Models;
 using FileDrop.Models.Database;
 using FileDrop.Models.Transfer;
 using FluentFTP;
-using FubarDev.FtpServer;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.UI.Xaml.Controls;
-using Microsoft.UI.Xaml.Media;
 using Newtonsoft.Json;
 using System;
-using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Text;
-using System.Threading;
 using System.Threading.Tasks;
-using TouchSocket.Core;
 using TouchSocket.Core.Config;
-using TouchSocket.Core.Dependency;
-using TouchSocket.Core.Log;
-using TouchSocket.Core.Plugins;
-using TouchSocket.Rpc.TouchRpc;
 using TouchSocket.Sockets;
-using Windows.Devices.Portable;
 using Windows.Networking;
 
 namespace FileDrop.Helpers.TransferHelper.Reviever
@@ -50,17 +37,10 @@ namespace FileDrop.Helpers.TransferHelper.Reviever
 
                     if (dres == ContentDialogResult.Primary)
                     {
-                        int port = NetworkHelper.GetRandomPort();
-                        string token = Guid.NewGuid().ToString();
-                        var respond = new TransferRespond()
-                        {
-                            Recieve = true,
-                            Port = port,
-                            Token = token
-                        };
+                        var respond = new TransferRespond() { Recieve = true };
                         server.SendAsync(client.ID, JsonConvert.SerializeObject(respond));
-                        _ = StartRecieve
-                            (endpointPair.RemoteHostName.DisplayName, port, token, transferInfo);
+                        _ = StartRecieve(endpointPair.RemoteHostName.DisplayName,
+                                transferInfo.port, transferInfo.token, transferInfo);
                     }
                     else
                     {

@@ -21,7 +21,7 @@ namespace FileDrop.Helpers.TransferHelper.Transferer
             return manager;
         }
 
-        public void ReportDone()
+        public void ReportDone(string message)
         {
             status = 0;
             try
@@ -31,7 +31,8 @@ namespace FileDrop.Helpers.TransferHelper.Transferer
                 collection.Insert(transfer);
             }
             catch { }
-            _ = ModelDialog.ShowDialog("发送完成", $"共发送了{transfer.FileInfos.Count}个文件");
+            if (message != null)
+                _ = ModelDialog.ShowDialog("发送完成", message);
         }
 
         public void ReportError(bool fatal, string message)
