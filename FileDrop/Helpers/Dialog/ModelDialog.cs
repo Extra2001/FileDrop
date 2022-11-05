@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using FileDrop.Pages.Dialogs;
 
 namespace FileDrop.Helpers.Dialog
 {
@@ -45,6 +46,29 @@ namespace FileDrop.Helpers.Dialog
                 dialog.Title = title;
                 dialog.DefaultButton = ContentDialogButton.Primary;
                 dialog.Content = content;
+                try
+                {
+                    _ = dialog.ShowAsync();
+                    showedDialogs = new ShowedDialog()
+                    {
+                        dialog = dialog
+                    };
+                }
+                catch { }
+            });
+        }
+
+        public static void ShowWaitingProgress(string title)
+        {
+            App.mainWindow.DispatcherQueue.TryEnqueue(() =>
+            {
+                if (showedDialogs != null)
+                    showedDialogs.Hide();
+                ContentDialog dialog = new ContentDialog();
+                dialog.XamlRoot = App.mainWindow.Content.XamlRoot;
+                dialog.Title = title;
+                dialog.DefaultButton = ContentDialogButton.Primary;
+                dialog.Content = new TransferProgressView();
                 try
                 {
                     _ = dialog.ShowAsync();

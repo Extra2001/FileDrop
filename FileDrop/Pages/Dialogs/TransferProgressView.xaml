@@ -1,0 +1,27 @@
+﻿<Page
+    x:Class="FileDrop.Pages.Dialogs.TransferProgressView"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:FileDrop.Pages.Dialogs"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d"
+    Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
+
+    <Grid>
+        <StackPanel Spacing="8">
+            <StackPanel Orientation="Horizontal">
+                <TextBlock Text="进度："/>
+                <TextBlock Text="{x:Bind transferProgress.progress}"/>
+            </StackPanel>
+            <StackPanel Orientation="Horizontal">
+                <TextBlock Text="速度："/>
+                <TextBlock Text="{x:Bind transferProgress.speed}"/>
+            </StackPanel>
+            <StackPanel Orientation="Horizontal">
+                <TextBlock Text="剩余时间："/>
+                <TextBlock Text="{x:Bind transferProgress.ETA}"/>
+            </StackPanel>
+        </StackPanel>
+    </Grid>
+</Page>
