@@ -56,5 +56,18 @@ namespace FileDrop.Helpers
             //rule.Direction = FirewallDirection.Inbound;
             //FirewallManager.Instance.Rules.Add(rule);
         }
+
+        public static void DisableTCPTurning()
+        {
+            var processInfo = new ProcessStartInfo
+            {
+                Verb = "runas",
+                FileName = "powershell.exe",
+                Arguments = $"netsh int tcp set global autotuninglevel=disabled",
+                UseShellExecute = true,
+                CreateNoWindow = true,
+            };
+            Process.Start(processInfo).WaitForExitAsync();
+        }
     }
 }

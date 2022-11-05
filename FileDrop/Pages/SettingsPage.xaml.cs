@@ -1,4 +1,5 @@
 ﻿using FileDrop.Helpers;
+using FileDrop.Helpers.WiFiDirect.Advertiser;
 using FileDrop.Models;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
@@ -12,6 +13,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices.WindowsRuntime;
+using System.Threading.Tasks;
 using Windows.Foundation;
 using Windows.Foundation.Collections;
 
@@ -33,6 +35,15 @@ namespace FileDrop.Pages
         private void saveButton_Click(object sender, RoutedEventArgs e)
         {
             settings.ToSettingsItem().Save();
+        }
+
+        private void turnOffTCPTurningButton_Click(object sender, RoutedEventArgs e)
+        {
+            NetworkHelper.DisableTCPTurning();
+        }
+        private async void resetAdapterButton_Click(object sender, RoutedEventArgs e)
+        {
+            await NetworkHelper.ResetWiFiAdapter();
         }
     }
 }

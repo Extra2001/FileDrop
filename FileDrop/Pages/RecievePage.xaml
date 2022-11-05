@@ -19,7 +19,8 @@
 
         <TextBlock Grid.Row="0" Margin="40,25,0,0" Style="{ThemeResource TitleTextBlockStyle}" Text="接收" ></TextBlock>
         <StackPanel Grid.Row="1" Margin="10,20,10,10" Spacing="5">
-            <Button HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" Height="60">
+            <Button HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" Height="60" 
+                    Click="turnAllowFindButton_Click">
                 <Grid>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*"/>
@@ -29,18 +30,6 @@
                     <TextBlock Margin="30,0,0,0" Grid.Column="0" VerticalAlignment="Center" Text="允许其他设备发现"/>
                     <ProgressRing Grid.Column="1" IsActive="{x:Bind FindSwitch.IsOn, Mode=OneWay}" Width="32"/>
                     <ToggleSwitch Grid.Column="2" x:Name="FindSwitch" IsOn="True" />
-                </Grid>
-            </Button>
-
-            <Button HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" Height="60"
-                    Click="resetAdapterButton_Click">
-                <Grid>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="96"/>
-                    </Grid.ColumnDefinitions>
-                    <TextBlock Margin="30,0,0,0" Grid.Column="0" VerticalAlignment="Center" Text="重置无线适配器"/>
-                    <SymbolIcon Grid.Column="1" Symbol="Share" />
                 </Grid>
             </Button>
         </StackPanel>

@@ -20,6 +20,28 @@
 
         <ScrollViewer Grid.Row="1" Margin="10,20,40,10" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" >
             <StackPanel>
+                <Button HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" Height="60"
+                    Click="turnOffTCPTurningButton_Click"  Margin="10,5,10,5">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="96"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Margin="30,0,0,0" Grid.Column="0" VerticalAlignment="Center" Text="关闭TCP流量控制"/>
+                        <SymbolIcon Grid.Column="1" Symbol="Share" />
+                    </Grid>
+                </Button>
+                <Button HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" Height="60"
+                    Click="resetAdapterButton_Click"  Margin="10,5,10,5">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="96"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Margin="30,0,0,0" Grid.Column="0" VerticalAlignment="Center" Text="重置无线适配器"/>
+                        <SymbolIcon Grid.Column="1" Symbol="Share" />
+                    </Grid>
+                </Button>
                 <Grid>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="Auto"/>

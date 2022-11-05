@@ -129,17 +129,20 @@ namespace FileDrop.Pages
             openedFlyout = sender as Flyout;
         }
 
-        private async void resetAdapterButton_Click(object sender, RoutedEventArgs e)
+        private void turnAllowFindButton_Click(object sender, RoutedEventArgs e)
         {
-            WiFiDirectAdvertiser.StopAdvertisement();
-            await Task.Delay(50);
-            await NetworkHelper.ResetWiFiAdapter();
-            await Task.Delay(3000);
-            App.mainWindow.DispatcherQueue.TryEnqueue(() =>
+            if (WiFiDirectAdvertiser.Started)
             {
                 WiFiDirectAdvertiser.StopAdvertisement();
+                TempStorage.Advertising = false;
+                FindSwitch.IsOn = false;
+            }
+            else
+            {
                 WiFiDirectAdvertiser.StartAdvertisement();
-            });
+                TempStorage.Advertising = true;
+                FindSwitch.IsOn = true;
+            }
         }
     }
 }
