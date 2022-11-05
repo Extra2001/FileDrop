@@ -1,38 +1,23 @@
-﻿using FileDrop.Helpers.Dialog;
-using FileDrop.Helpers.TransferHelper.Reciever;
-using FileDrop.Helpers.WiFiDirect;
+﻿using FileDrop.Helpers.TransferHelper.Transferer.FileSystem;
 using FileDrop.Helpers.WiFiDirect.Connector;
 using FileDrop.Models;
 using FileDrop.Models.Database;
 using FileDrop.Models.Transfer;
-using Microsoft.UI.Xaml.Media;
-using Microsoft.UI.Xaml.Shapes;
+using FubarDev.FtpServer;
+using Microsoft.Extensions.DependencyInjection;
 using Newtonsoft.Json;
 using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
-using TouchSocket.Core;
+using System.Threading;
 using TouchSocket.Core.Config;
-using TouchSocket.Core.Dependency;
-using TouchSocket.Core.Log;
-using TouchSocket.Core.Plugins;
-using TouchSocket.Core.Run;
-using TouchSocket.Http;
-using TouchSocket.Rpc.TouchRpc;
 using TouchSocket.Sockets;
 using Windows.Networking;
-using Windows.Storage;
-using Windows.Storage.Streams;
-using WindowsFirewallHelper;
 
 namespace FileDrop.Helpers.TransferHelper.Transferer
 {
     public static class TransferTask
     {
-        private static HttpService service = null;
+        private static IFtpServerHost service = null;
         public static void RequestTransfer(EndpointPair endpointPair, TransferInfo transferInfo)
         {
             TcpClient tcpClient = new TcpClient();
@@ -47,7 +32,7 @@ namespace FileDrop.Helpers.TransferHelper.Transferer
                 {
                     TransferStatusManager.manager.ReportDone();
                     tcpClient.SafeDispose();
-                    service.SafeDispose();
+                    service.StopAsync().Wait();
                     service = null;
                     tcpClient = null;
                 }
@@ -56,8 +41,7 @@ namespace FileDrop.Helpers.TransferHelper.Transferer
                     var respond = JsonConvert.DeserializeObject<TransferRespond>(mes);
                     if (respond.Recieve)
                     {
-                        StartTransfer($"{endpointPair.LocalHostName.DisplayName}:{respond.Port}",
-                            respond.Token, transferInfo);
+                        StartTransfer(respond.Port, respond.Token, transferInfo);
                     }
                 }
             };
@@ -65,24 +49,20 @@ namespace FileDrop.Helpers.TransferHelper.Transferer
             TouchSocketConfig config = new TouchSocketConfig();
             config.SetRemoteIPHost(new IPHost(endpointPair.RemoteHostName.DisplayName + ":31826"));
             tcpClient.Setup(config);
-            int retry = 0;
-            retryConnect:
-            try
+            bool success = false;
+            for (int retry = 0; retry < 3; retry++)
             {
-                tcpClient.Connect();
-            }
-            catch
-            {
-                if (retry > 3)
-                    ConnectStatusManager.ReportError(true, "连接超时");
-                else
+                try
                 {
-                    retry++;
-                    goto retryConnect;
+                    tcpClient.Connect();
+                    success = true;
+                    break;
                 }
+                catch { }
             }
+            if (!success) ConnectStatusManager.ReportError(true, "连接超时");
         }
-        private static void StartTransfer(string localIPHost, string token, TransferInfo transferInfo)
+        private static void StartTransfer(int port, string token, TransferInfo transferInfo)
         {
             var transfer = new Transfer()
             {
@@ -97,22 +77,34 @@ namespace FileDrop.Helpers.TransferHelper.Transferer
 
             TransferStatusManager.StartNew(transfer);
 
-            service.SafeDispose();
-            service = new HttpService();
-            var config = new TouchSocketConfig();
-            var plugin = new TransferHttpPlugin();
+            service = CreateFTPServer(port, token, transferInfo);
+        }
 
-            foreach (var item in transferInfo.TransferInfos)
-                plugin.AddFile(item.Path, item.InPackagePath);
+        public static IFtpServerHost CreateFTPServer(int port,string token, TransferInfo transferInfo)
+        {
+            var services = new ServiceCollection();
 
-            config.UsePlugin()
-                .SetListenIPHosts(new IPHost[] { new IPHost(localIPHost) })
-                .ConfigurePlugins(a =>
-                {
-                    a.Add(plugin);
-                });
+            services.Configure<FTPFileSystemOptions>(opt => 
+                opt.transferInfo = transferInfo);
 
-            service.Setup(config).Start();
+            services.AddFtpServer(builder =>
+            {
+                builder.UseFTPFileSystem();
+            });
+
+            services.AddFtpToken(token);
+
+            services.Configure<FtpServerOptions>(options =>
+            {
+                options.Port = port;
+            });
+
+            using (var serviceProvider = services.BuildServiceProvider())
+            {
+                var ftpServerHost = serviceProvider.GetRequiredService<IFtpServerHost>();
+                ftpServerHost.StartAsync(CancellationToken.None);
+                return ftpServerHost;
+            }
         }
     }
 }

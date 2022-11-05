@@ -8,7 +8,7 @@ namespace FileDrop.Helpers.TransferHelper
 {
     public class SpeedParser
     {
-        public static string Parse(long speed)
+        public static string Parse(double speed)
         {
             if (speed < 1024)
                 return $"{speed} b/s";

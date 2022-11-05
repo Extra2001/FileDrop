@@ -1,10 +1,12 @@
-﻿using Downloader;
-using FileDrop.Helpers.Dialog;
+﻿using FileDrop.Helpers.Dialog;
 using FileDrop.Helpers.TransferHelper.Reciever;
 using FileDrop.Helpers.TransferHelper.Transferer;
 using FileDrop.Models;
 using FileDrop.Models.Database;
 using FileDrop.Models.Transfer;
+using FluentFTP;
+using FubarDev.FtpServer;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
 using Newtonsoft.Json;
@@ -13,6 +15,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using TouchSocket.Core;
 using TouchSocket.Core.Config;
@@ -29,6 +32,7 @@ namespace FileDrop.Helpers.TransferHelper.Reviever
     public static class RecieveTask
     {
         private static TcpService server = null;
+        private static AsyncFtpClient ftpClient = null;
         public static void WaitForTransfer(EndpointPair endpointPair)
         {
             NetworkHelper.SetNetworkProfileToPrivate();
@@ -56,7 +60,7 @@ namespace FileDrop.Helpers.TransferHelper.Reviever
                         };
                         server.SendAsync(client.ID, JsonConvert.SerializeObject(respond));
                         _ = StartRecieve
-                            (endpointPair.RemoteHostName.DisplayName + ":" + port, token, transferInfo);
+                            (endpointPair.RemoteHostName.DisplayName, port, token, transferInfo);
                     }
                     else
                     {
@@ -74,7 +78,7 @@ namespace FileDrop.Helpers.TransferHelper.Reviever
         {
             server?.Stop();
         }
-        public static async Task StartRecieve(string remoteIPHost, string token, TransferInfo transferInfo)
+        public static async Task StartRecieve(string host, int port, string token, TransferInfo transferInfo)
         {
             var folder = DirectoryHelper.GenerateRecieveFolder(transferInfo.deviceName);
 
@@ -89,36 +93,21 @@ namespace FileDrop.Helpers.TransferHelper.Reviever
                 TransferDirection = TransferDirection.Recieve
             };
 
-            List<Task> tasks = new List<Task>();
-            List<DownloadService> downloaders = new List<DownloadService>();
+            ftpClient = new AsyncFtpClient(host, "root", token, port);
+            await ftpClient.AutoConnect();
 
-            for (int i = 0; i < transferInfo.TransferInfos.Count; i++)
-            {
-                var downloadOpt = new DownloadConfiguration()
-                {
-                    ChunkCount = 8,
-                    ParallelDownload = true
-                };
-                var downloader = new DownloadService(downloadOpt);
-                downloaders.Add(downloader);
-            }
+            RecieveStatusManager.StartNew(transfer);
 
-            RecieveStatusManager.StartNew(transfer, downloaders);
+            var files = transferInfo.TransferInfos.Select(x => x.InPackagePath);
+            var results = await ftpClient.DownloadDirectory(folder, "/", progress: new DownloadProgressManager());
 
-            for (int i = 0; i < downloaders.Count; i++)
-            {
-                var item = transferInfo.TransferInfos[i];
-                string file = Path.Combine(folder, item.InPackagePath);
-                string url = @$"http://{remoteIPHost}/{item.InPackagePath}";
-                tasks.Add(downloaders[i].DownloadFileTaskAsync(url, file));
-            }
-
-            await Task.WhenAll(tasks);
+            RecieveStatusManager.manager.ReportDone(results);
         }
         public static void RecieveDone()
         {
             try
             {
+                ftpClient.AutoDispose();
                 server.Send(server.GetClients().FirstOrDefault().ID, "RecieveDone");
                 server.Clear();
                 server.Stop();
