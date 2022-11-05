@@ -12,7 +12,8 @@
     <EnableMsixTooling>true</EnableMsixTooling>
   </PropertyGroup>
   <ItemGroup>
-    <None Remove="Pages\Dialogs\Toast.xaml" />
+    <None Remove="Pages\Dialogs\ToastView.xaml" />
+    <None Remove="Pages\Dialogs\TransferProgressView.xaml" />
     <None Remove="Pages\RecievePage.xaml" />
     <None Remove="Pages\SettingsPage.xaml" />
     <None Remove="Pages\TransferPage.xaml" />
@@ -51,6 +52,11 @@
     <ProjectCapability Include="Msix" />
   </ItemGroup>
   <ItemGroup>
+    <Page Update="Pages\Dialogs\TransferProgressView.xaml">
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+  </ItemGroup>
+  <ItemGroup>
     <Page Update="Pages\TransferPage.xaml">
       <Generator>MSBuild:Compile</Generator>
     </Page>
@@ -66,7 +72,7 @@
     </Page>
   </ItemGroup>
   <ItemGroup>
-    <Page Update="Pages\Dialogs\Toast.xaml">
+    <Page Update="Pages\Dialogs\ToastView.xaml">
       <Generator>MSBuild:Compile</Generator>
     </Page>
   </ItemGroup>
