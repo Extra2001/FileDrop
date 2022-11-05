@@ -12,15 +12,15 @@
         <StackPanel Spacing="8">
             <StackPanel Orientation="Horizontal">
                 <TextBlock Text="进度："/>
-                <TextBlock Text="{x:Bind transferProgress.progress}"/>
+                <TextBlock Text="{x:Bind transferProgress.progress, Mode=OneWay}"/>
             </StackPanel>
             <StackPanel Orientation="Horizontal">
                 <TextBlock Text="速度："/>
-                <TextBlock Text="{x:Bind transferProgress.speed}"/>
+                <TextBlock Text="{x:Bind transferProgress.speed, Mode=OneWay}"/>
             </StackPanel>
             <StackPanel Orientation="Horizontal">
                 <TextBlock Text="剩余时间："/>
-                <TextBlock Text="{x:Bind transferProgress.ETA}"/>
+                <TextBlock Text="{x:Bind transferProgress.ETA, Mode=OneWay}"/>
             </StackPanel>
         </StackPanel>
     </Grid>
