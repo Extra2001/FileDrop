@@ -9,13 +9,16 @@ namespace FileDrop.Helpers.Dialog
 {
     public class ToastDialog
     {
-        public static async void Show(string message)
+        public static void Show(string message)
         {
-            var toast = new ToastView();
-            toast.Message = message;
-            App.mainWindow.ToastGrid.Children.Add(toast);
-            await Task.Delay(3000);
-            App.mainWindow.ToastGrid.Children.Remove(toast);
+            App.mainWindow.DispatcherQueue.TryEnqueue(async () =>
+            {
+                var toast = new ToastView();
+                toast.Message = message;
+                App.mainWindow.ToastGrid.Children.Add(toast);
+                await Task.Delay(3000);
+                App.mainWindow.ToastGrid.Children.Remove(toast);
+            });
         }
     }
 }

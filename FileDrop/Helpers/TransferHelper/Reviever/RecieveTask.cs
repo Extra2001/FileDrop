@@ -13,6 +13,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using TouchSocket.Core.Config;
 using TouchSocket.Sockets;
+using Windows.Media.Protection.PlayReady;
 using Windows.Networking;
 
 namespace FileDrop.Helpers.TransferHelper.Reviever
@@ -27,34 +28,51 @@ namespace FileDrop.Helpers.TransferHelper.Reviever
             server.SafeDispose();
 
             server = new TcpService();
+
             server.Received += (client, byteBlock, requestInfo) =>
             {
                 string mes = Encoding.UTF8.GetString(byteBlock.Buffer, 0, byteBlock.Len);
                 var transferInfo = JsonConvert.DeserializeObject<TransferInfo>(mes);
-                App.mainWindow.DispatcherQueue.TryEnqueue(async () =>
-                {
-                    var dres = await ModelDialog.ShowDialog("开始传输",
-                    $"{transferInfo.deviceName}想要共享{transferInfo.FileInfos.Count}个文件（夹）", "接受", "取消");
 
-                    if (dres == ContentDialogResult.Primary)
+                NotificationDialog.SendRecieveToast($"{transferInfo.deviceName}想要共享{transferInfo.FileInfos.Count}个文件（夹）", res =>
+                {
+                    App.mainWindow.DispatcherQueue.TryEnqueue(async () =>
                     {
-                        var respond = new TransferRespond() { Recieve = true };
-                        server.SendAsync(client.ID, JsonConvert.SerializeObject(respond));
-                        _ = StartRecieve(endpointPair.RemoteHostName.DisplayName,
-                                transferInfo.port, transferInfo.token, transferInfo);
-                    }
-                    else
-                    {
-                        var respond = new TransferRespond() { Recieve = false };
-                        server.SendAsync(client.ID, JsonConvert.SerializeObject(respond));
-                    }
+                        if (res == 3)
+                        {
+                            var dres = await ModelDialog.ShowDialog("开始传输",
+                                        $"{transferInfo.deviceName}想要共享" +
+                                        $"{transferInfo.FileInfos.Count}个文件（夹）", "接受", "取消");
+                            if (dres == ContentDialogResult.Primary)
+                                Accept(client, endpointPair, transferInfo);
+                            else Decline(client);
+                        }
+                        else if (res == 1) Accept(client, endpointPair, transferInfo);
+                        else Decline(client);
+                    });
                 });
+
             };
             server.Setup(new TouchSocketConfig()
                 .SetListenIPHosts(new IPHost[] {
                         new IPHost(endpointPair.LocalHostName.DisplayName + ":" + 31826) }))
                 .Start();
         }
+
+        public static void Accept(SocketClient client, EndpointPair endpointPair, TransferInfo transferInfo)
+        {
+            var respond = new TransferRespond() { Recieve = true };
+            server.SendAsync(client.ID, JsonConvert.SerializeObject(respond));
+            _ = StartRecieve(endpointPair.RemoteHostName.DisplayName,
+                    transferInfo.port, transferInfo.token, transferInfo);
+        }
+
+        public static void Decline(SocketClient client)
+        {
+            var respond = new TransferRespond() { Recieve = false };
+            server.SendAsync(client.ID, JsonConvert.SerializeObject(respond));
+        }
+
         public static void StopWaitForTransfer()
         {
             server?.Stop();
@@ -77,6 +95,7 @@ namespace FileDrop.Helpers.TransferHelper.Reviever
             RecieveStatusManager.StartNew(transfer);
 
             ftpClient = new AsyncFtpClient(host, "root", token, port);
+            
             var cancel = new CancellationTokenSource(3000);
             var connectResult = await ftpClient.AutoConnect(cancel.Token);
 

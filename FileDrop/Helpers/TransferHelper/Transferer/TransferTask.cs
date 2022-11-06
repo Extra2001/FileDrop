@@ -26,6 +26,7 @@ namespace FileDrop.Helpers.TransferHelper.Transferer
             tcpClient = new TcpClient();
             transferInfo.port = NetworkHelper.GetRandomPort();
             transferInfo.token = Guid.NewGuid().ToString();
+            transferInfo.ipAddresses = NetworkHelper.GetLocalIPAddresses();
 
             StartTransfer(endpointPair.LocalHostName.DisplayName,
                  transferInfo.port, transferInfo.token, transferInfo);

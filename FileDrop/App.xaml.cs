@@ -10,6 +10,7 @@ namespace FileDrop
     public partial class App : Application
     {
         public static MainWindow mainWindow { get; set; }
+        private NotificationManager notificationManager;
 
         public App()
         {
@@ -27,11 +28,14 @@ namespace FileDrop
             WiFiDirectConnector.StopWatcher();
             WiFiDirectConnector.CloseDevice();
             RecieveTask.StopWaitForTransfer();
+            notificationManager.Unregister();
             await ModelDialog.ShowDialog("提示", "发生未捕获的异常" + e.Message);
             Exit();
         }
-        protected override void OnLaunched(Microsoft.UI.Xaml.LaunchActivatedEventArgs args)
+        protected override void OnLaunched(LaunchActivatedEventArgs args)
         {
+            notificationManager = new NotificationManager();
+            notificationManager.Init();
             mainWindow = new MainWindow();
             mainWindow.Activate();
         }

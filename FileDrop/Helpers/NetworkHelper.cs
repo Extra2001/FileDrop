@@ -69,5 +69,31 @@ namespace FileDrop.Helpers
             };
             Process.Start(processInfo).WaitForExitAsync();
         }
+
+        public static List<string> GetLocalIPAddresses()
+        {
+            var addrs = new List<string>();
+            var interfaces = NetworkInterface.GetAllNetworkInterfaces();
+            foreach (var item in interfaces)
+            {
+                bool c1 = item.NetworkInterfaceType == NetworkInterfaceType.Ethernet
+                    || item.NetworkInterfaceType == NetworkInterfaceType.Wireless80211;
+                bool c2 = item.IsReceiveOnly == false;
+                bool c3 = item.Speed >= 100 * 1000 * 1000;
+                bool c4 = !item.Name.Contains("VM");
+                bool c5 = !item.Name.Contains("Virtual");
+                bool c6 = !item.Description.Contains("Virtual");
+                bool c7 = !item.Name.Contains("Hyper");
+                bool c8 = !item.Description.Contains("Direct");
+                if (c1 && c2 && c3 && c4 && c5 && c6 && c7 && c8)
+                {
+                    addrs.AddRange(item.GetIPProperties()
+                        .UnicastAddresses
+                        .Where(x => !x.Address.ToString().StartsWith("169.254"))
+                        .Select(x => x.Address.ToString()));
+                }
+            }
+            return addrs;
+        }
     }
 }

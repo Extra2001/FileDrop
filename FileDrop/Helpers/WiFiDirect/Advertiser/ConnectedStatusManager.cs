@@ -11,12 +11,12 @@ namespace FileDrop.Helpers.WiFiDirect.Advertiser
     {
         public static void ReportProgress(string message)
         {
-            ModelDialog.ShowWaiting("连接中", message);
+            ToastDialog.Show("其他设备正在请求发送：" + message);
         }
 
         public static void ReportError(bool isFatal, string message)
         {
-            _ = ModelDialog.ShowDialog("接收失败", message);
+            ToastDialog.Show("建立连接失败：" + message);
             WiFiDirectAdvertiser.StopAdvertisement();
             WiFiDirectAdvertiser.StartAdvertisement();
         }
