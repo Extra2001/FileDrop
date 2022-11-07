@@ -71,12 +71,21 @@ namespace FileDrop.Helpers.TransferHelper.Reviever
                 var client = new AsyncFtpClient(item, "root", token, port);
                 clients.Add(client);
                 var cancel = new CancellationTokenSource(3000);
-                tasks.Add(ftpClient.AutoConnect(cancel.Token));
+                tasks.Add(client.AutoConnect(cancel.Token));
             }
-            var res = await Task.WhenAny(tasks);
-            if (res == null)
-                return null;
-            return (await res).Host;
+            var res = await Task.WhenAll(tasks);
+            foreach (var item in res)
+            {
+                if (res != null && item.Host != null)
+                {
+                    foreach(var client in clients)
+                    {
+                        client.AutoDispose();
+                    }
+                    return item.Host;
+                }
+            }
+            return null;
         }
 
         public static async void Accept(SocketClient client, EndpointPair endpointPair, TransferInfo transferInfo)
