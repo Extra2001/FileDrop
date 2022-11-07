@@ -73,16 +73,18 @@ namespace FileDrop.Helpers.TransferHelper.Reviever
                 var cancel = new CancellationTokenSource(3000);
                 tasks.Add(client.AutoConnect(cancel.Token));
             }
-            var res = await Task.WhenAll(tasks);
+            var datas = tasks.Select(x => x.ContinueWith(y => y));
+            var res = (await Task.WhenAll(datas)).AsEnumerable();
+            res = res.Where(x => !x.IsCanceled && !x.IsFaulted);
             foreach (var item in res)
             {
-                if (res != null && item.Host != null)
+                if (item.Result != null && item.Result.Host != null)
                 {
-                    foreach(var client in clients)
+                    foreach (var client in clients)
                     {
                         client.AutoDispose();
                     }
-                    return item.Host;
+                    return item.Result.Host;
                 }
             }
             return null;
