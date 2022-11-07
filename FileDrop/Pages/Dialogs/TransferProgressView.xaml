@@ -6,13 +6,14 @@
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     mc:Ignorable="d"
-    Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
+    Background="Transparent">
 
     <Grid>
         <StackPanel Spacing="8">
             <StackPanel Orientation="Horizontal">
                 <TextBlock Text="进度："/>
                 <TextBlock Text="{x:Bind transferProgress.progress, Mode=OneWay}"/>
+                <TextBlock Text="%"/>
             </StackPanel>
             <StackPanel Orientation="Horizontal">
                 <TextBlock Text="速度："/>
