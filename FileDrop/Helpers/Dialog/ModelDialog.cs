@@ -17,8 +17,12 @@ namespace FileDrop.Helpers.Dialog
             (string title, string content, string primaryButton = "确定", string closeButton = null)
         {
             await Task.Delay(30);
-            if (showedDialogs != null)
-                showedDialogs.Hide();
+            try
+            {
+                if (showedDialogs != null)
+                    showedDialogs.Hide();
+            }
+            catch { }
 
             ContentDialog dialog = new ContentDialog();
 

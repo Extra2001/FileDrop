@@ -223,7 +223,7 @@ namespace FileDrop.Helpers.WiFiDirect.Connector
             StopWatcher();
             App.mainWindow.DispatcherQueue.TryEnqueue(async () =>
             {
-                ConnectStatusManager.ReportProgress("开始发起连接");
+                ConnectStatusManager.ReportProgress("正在连接");
 
                 CloseDevice();
 
@@ -278,7 +278,6 @@ namespace FileDrop.Helpers.WiFiDirect.Connector
                 wfdDevice.ConnectionStatusChanged += OnConnectionStatusChanged;
                 connectedDevice = wfdDevice;
                 NetworkHelper.SetNetworkProfileToPrivate();
-                ConnectStatusManager.ReportProgress("L2连接建立成功，正在发起L4连接请求");
                 callback.Invoke(wfdDevice);
             });
         }

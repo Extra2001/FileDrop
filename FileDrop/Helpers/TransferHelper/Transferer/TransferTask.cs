@@ -28,8 +28,7 @@ namespace FileDrop.Helpers.TransferHelper.Transferer
             transferInfo.token = Guid.NewGuid().ToString();
             transferInfo.ipAddresses = NetworkHelper.GetLocalIPAddresses();
 
-            StartTransfer(endpointPair.LocalHostName.DisplayName,
-                 transferInfo.port, transferInfo.token, transferInfo);
+            StartTransfer(transferInfo.port, transferInfo.token, transferInfo);
 
             tcpClient.Connected += (client, e) =>
             {
@@ -83,7 +82,7 @@ namespace FileDrop.Helpers.TransferHelper.Transferer
             tcpClient = null;
         }
 
-        private static async void StartTransfer(string host, int port, string token, TransferInfo transferInfo)
+        private static async void StartTransfer(int port, string token, TransferInfo transferInfo)
         {
             var transfer = new Transfer()
             {
@@ -98,11 +97,11 @@ namespace FileDrop.Helpers.TransferHelper.Transferer
 
             TransferStatusManager.StartNew(transfer);
 
-            service = await CreateFTPServer(host, port, token, transferInfo);
+            service = await CreateFTPServer(port, token, transferInfo);
         }
 
         public static async Task<IFtpServerHost> CreateFTPServer
-            (string host, int port,string token, TransferInfo transferInfo)
+            (int port,string token, TransferInfo transferInfo)
         {
             var services = new ServiceCollection();
 
@@ -118,7 +117,6 @@ namespace FileDrop.Helpers.TransferHelper.Transferer
 
             services.Configure<FtpServerOptions>(options =>
             {
-                options.ServerAddress = host;
                 options.Port = port;
             });
 

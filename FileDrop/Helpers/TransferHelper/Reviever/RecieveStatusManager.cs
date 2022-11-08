@@ -4,6 +4,7 @@ using FileDrop.Models.Database;
 using FluentFTP;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using Windows.System;
 
@@ -36,6 +37,7 @@ namespace FileDrop.Helpers.TransferHelper.Reciever
                 collection.Insert(transfer);
             }
             catch { }
+            RestoreFile.RestoreZip(Path.Combine(transfer.DirectoryName, "package.zip"));
             RecieveTask.RecieveDone();
             int success = results.Where(x => x.IsSuccess).Count();
             var failed = results.Where(x => x.IsFailed).Select(x => x.Exception.Message);
