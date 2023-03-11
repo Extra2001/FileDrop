@@ -10,7 +10,7 @@ using System;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using TouchSocket.Core.Config;
+using TouchSocket.Core;
 using TouchSocket.Sockets;
 using Windows.Networking;
 
